@@ -1,0 +1,266 @@
+{
+  "schema_version": "2.0",
+  "id": "D3-L02",
+  "domain": "D3",
+  "title": "Model Context Protocol and Integration Boundaries",
+  "difficulty": "Professional",
+  "estimated_minutes": 95,
+  "as_of": "2026-11-01",
+  "learning_outcomes": [
+    "Explain the core principles and boundaries of model context protocol and integration boundaries.",
+    "Select and justify an appropriate architecture pattern for a realistic system.",
+    "Identify failure modes, security risks and operational constraints.",
+    "Implement or evaluate a representative design using a repeatable lab.",
+    "Defend the design using measurable acceptance criteria and explicit trade-offs."
+  ],
+  "prerequisites": [
+    "Basic software engineering and system design",
+    "Foundational understanding of LLM applications",
+    "Familiarity with Python and JSON is helpful"
+  ],
+  "executive_orientation": "MCP is an open protocol for connecting AI applications to external tools and context providers. It standardises interaction patterns, but does not automatically make a server trusted, secure or correctly authorised.",
+  "first_principles": "Think of MCP as an integration protocol, not a security product or an agent framework. A host application manages the user experience and trust decisions; clients connect to servers; servers expose capabilities such as tools, resources or prompts according to the protocol implementation. The precise capabilities and transport details are version-sensitive and must be checked against current MCP documentation.",
+  "technical_deep_dive": "Evaluate an MCP server as a third-party integration: identity, transport security, authentication, authorization, tool scope, data exposure, logging, versioning and supply-chain risk. Distinguish local stdio processes from remote network services. Validate tool descriptions and inputs; do not assume a server-provided description is benign. Keep secrets in the host/server environment, not in model-visible content. Define user consent and approval policies around sensitive operations.",
+  "architecture_pattern": {
+    "when_to_use": [
+      "The task has multiple components or competing requirements.",
+      "Quality, security, latency or cost must be measured and defended.",
+      "The system will be operated and changed after initial release."
+    ],
+    "when_not_to_use": [
+      "A simpler deterministic process already meets the requirement.",
+      "The proposed design adds complexity without a measurable benefit."
+    ],
+    "alternatives": [
+      "A deterministic workflow or rules engine",
+      "A bounded model-assisted component with human review",
+      "A managed integration with narrower permissions"
+    ],
+    "decision_criteria": [
+      "Task variability and consequence of error",
+      "Data sensitivity and permission boundaries",
+      "Latency, reliability and cost envelope",
+      "Operational ownership and maintainability",
+      "Ability to test and reverse the decision"
+    ]
+  },
+  "diagram_mermaid": "flowchart LR\n A[AI host application] --> B[MCP client]\n B <-->|Protocol messages| C[MCP server]\n C --> D[Approved tools and resources]\n D --> E[External systems]\n A --> F[User consent and policy controls]\n F --> B",
+  "worked_example": {
+    "scenario": "A research assistant needs read-only access to a local document repository and a project management system. Use separate MCP servers with narrow scopes. The document server exposes search/read resources; the project server exposes issue lookup but not issue deletion. The host enforces user consent and logs tool calls.",
+    "assumptions": [
+      "The use case has an identified owner and approved purpose.",
+      "The system has defined access boundaries and representative test data.",
+      "Consequential actions are subject to policy and human oversight where required."
+    ],
+    "walkthrough": [
+      "Clarify the user outcome and define measurable success.",
+      "Map inputs, data sources, trust boundaries and system dependencies.",
+      "Select the simplest architecture that meets requirements.",
+      "Define interfaces, state transitions, validation and failure handling.",
+      "Implement a bounded proof of concept with synthetic or approved data.",
+      "Evaluate normal, edge, adversarial and degraded scenarios.",
+      "Document the decision, limitations, owner and release conditions."
+    ],
+    "expected_result": "A documented architecture with explicit assumptions, testable acceptance criteria, controlled failure behaviour and a clear operational owner."
+  },
+  "implementation_lab": {
+    "objective": "Create an integration threat review for an MCP server. List capabilities exposed, data accessible, authentication model, network boundary, permissions, approval requirements and failure modes. Build a mock capability registry and reject tools not on an explicit allowlist.",
+    "steps": [
+      "Write down the requirements and assumptions before coding.",
+      "Implement the smallest deterministic representation of the control or design.",
+      "Add at least three positive and three negative tests.",
+      "Record the expected output and compare actual behaviour.",
+      "Write a short architecture note explaining what the prototype does not prove."
+    ],
+    "code_language": "python",
+    "code": "APPROVED_CAPABILITIES = {'search_documents', 'read_document', 'get_issue'}\n\ndef approve_capability(name, user_scopes):\n    if name not in APPROVED_CAPABILITIES:\n        return False, 'capability not approved by host'\n    if name == 'read_document' and 'documents:read' not in user_scopes:\n        return False, 'missing documents:read scope'\n    return True, 'host policy permits capability; validate arguments before execution'\n",
+    "verification": [
+      "Review the protocol version and server implementation documentation. Test server startup, authentication expiry, unavailable server, malformed result, permission denial and malicious content. Treat every integration as an independent trust boundary.",
+      "Run the exercise in a clean Python environment and retain the test evidence.",
+      "Identify which production concerns are outside the scope of this small lab."
+    ]
+  },
+  "tradeoffs": [
+    {
+      "dimension": "Complexity versus capability",
+      "option_a": "Use the simplest deterministic component",
+      "option_b": "Introduce model-driven or distributed orchestration",
+      "consideration": "One shared server versus per-domain servers: shared reduces operations but broadens permissions. Local process versus remote service: local can simplify network exposure but increases endpoint supply-chain and process risks. Broad tool catalogue versus narrow allowlist: flexibility must be balanced against attack surface."
+    },
+    {
+      "dimension": "Automation versus oversight",
+      "option_a": "Automate the complete path",
+      "option_b": "Require human review at consequential boundaries",
+      "consideration": "Automation reduces handling effort; oversight provides accountability and recovery. Choose based on impact, reversibility and evidence of reliability."
+    },
+    {
+      "dimension": "Speed versus assurance",
+      "option_a": "Release quickly with limited checks",
+      "option_b": "Use staged rollout and layered evaluation",
+      "consideration": "A faster release is not beneficial if it increases downstream failure cost or makes recovery difficult."
+    }
+  ],
+  "failure_modes": [
+    {
+      "failure": "Ambiguous requirements",
+      "symptoms": "Stakeholders disagree about success or the system solves the wrong problem",
+      "cause": "Assumptions were not validated",
+      "mitigation": "Use measurable outcomes, examples and sign-off",
+      "recovery": "Pause scope expansion and re-baseline requirements."
+    },
+    {
+      "failure": "Boundary or permission failure",
+      "symptoms": "Data or actions are available to an unintended user or component",
+      "cause": "Authorization was assumed rather than enforced",
+      "mitigation": "Enforce least privilege at the service boundary",
+      "recovery": "Revoke access, investigate logs and remediate exposure."
+    },
+    {
+      "failure": "Unvalidated output or state",
+      "symptoms": "Malformed, inconsistent or unsupported result reaches downstream system",
+      "cause": "Trust was placed in model output without independent checks",
+      "mitigation": "Use schemas, semantic validation and source checks",
+      "recovery": "Quarantine result and route for review."
+    },
+    {
+      "failure": "Dependency or service outage",
+      "symptoms": "Requests time out or tasks remain incomplete",
+      "cause": "No bounded retry, fallback or recovery path",
+      "mitigation": "Use timeouts, circuit breakers, durable state and runbooks",
+      "recovery": "Enter degraded mode and reconcile pending work."
+    },
+    {
+      "failure": "Unobserved quality drift",
+      "symptoms": "Users report declining quality despite healthy uptime",
+      "cause": "Only infrastructure metrics were monitored",
+      "mitigation": "Track task-level quality and review samples",
+      "recovery": "Roll back or adjust the affected component and rerun evaluation."
+    }
+  ],
+  "security_governance": [
+    "Authenticate servers and users appropriately; use TLS for remote transports; scope permissions; protect credentials; review data returned to the model; log access; require approval for sensitive operations. Do not assume MCP itself enforces application-level policy.",
+    "Use least privilege and enforce access decisions outside the model.",
+    "Treat external content and tool results as untrusted data.",
+    "Minimise data collection and retention; keep secrets out of prompts and logs.",
+    "Record decisions and approvals with enough metadata for audit and incident review."
+  ],
+  "evaluation": {
+    "metrics": [
+      "Task completion and critical error rate",
+      "Latency percentiles and resource consumption",
+      "Validation and policy-denial rates",
+      "Human override or escalation rate",
+      "Cost per successfully completed task"
+    ],
+    "test_design": [
+      "Representative normal cases",
+      "Boundary and malformed-input cases",
+      "Adversarial or malicious-input cases",
+      "Timeout, unavailable dependency and partial-failure cases",
+      "Regression tests for every behaviour-affecting change"
+    ],
+    "acceptance_criteria": [
+      "No critical authorization or safety test fails.",
+      "Required output or interface contracts are validated.",
+      "Failure behaviour is observable and recoverable.",
+      "Performance meets the agreed operating envelope.",
+      "Known limitations and residual risks are documented."
+    ]
+  },
+  "production_checklist": [
+    "MCP is understood as a protocol, not a trust guarantee.",
+    "Every server has a documented trust and permission review.",
+    "Capabilities are allowlisted and scoped.",
+    "Secrets are not exposed in model context.",
+    "Version and failure compatibility are tested.",
+    "Host-level consent and authorization are explicit."
+  ],
+  "case_study": {
+    "scenario": "Your team wants to install a community MCP server that can read files, access GitHub and execute shell commands. Decide whether and how it can be introduced into a production environment.",
+    "constraints": [
+      "Limited engineering time and operating budget",
+      "A need for accountable ownership and explainable decisions",
+      "Potential external dependencies and changing inputs",
+      "A requirement to preserve user trust and recover from failure"
+    ],
+    "task": "Submit an MCP threat model, deployment boundary diagram, permission matrix and staged rollout plan.",
+    "rubric": [
+      "25% problem framing and requirements traceability",
+      "20% architecture and interface quality",
+      "20% security, privacy and failure handling",
+      "20% evaluation and operational readiness",
+      "15% clarity of trade-off defence"
+    ],
+    "exemplar_reasoning": "Do not grant all capabilities by default. Inspect source and release provenance; isolate runtime; disable shell execution unless essential; use read-only repository scopes; restrict filesystem paths; test malicious inputs; require approval for writes; monitor and provide a kill switch."
+  },
+  "knowledge_check": [
+    {
+      "id": "D3-L02-Q1",
+      "type": "comprehension",
+      "difficulty": "Core",
+      "question": "What is the central architectural principle behind model context protocol and integration boundaries?",
+      "answer": "MCP is an open protocol for connecting AI applications to external tools and context providers. It standardises interaction patterns, but does not automatically make a server trusted, secure or correctly authorised.",
+      "explanation": "A strong answer links the concept to requirements, system boundaries and measurable behaviour."
+    },
+    {
+      "id": "D3-L02-Q2",
+      "type": "scenario",
+      "difficulty": "Advanced",
+      "question": "A prototype succeeds on a happy-path demonstration. Is that sufficient for production approval? Explain the additional evidence required.",
+      "answer": "No. Require representative evaluation, negative and adversarial tests, authorization checks, failure recovery, operational metrics, ownership and documented limitations.",
+      "explanation": "A demo demonstrates possibility, not reliability, safety or operational readiness."
+    },
+    {
+      "id": "D3-L02-Q3",
+      "type": "architect_judgement",
+      "difficulty": "Advanced",
+      "question": "How should an architect justify choosing a more complex design over a simpler alternative?",
+      "answer": "Show that the simpler alternative fails a material requirement and that the added capability's benefits exceed its cost, risk and operational burden.",
+      "explanation": "Complexity needs evidence-based justification."
+    },
+    {
+      "id": "D3-L02-Q4",
+      "type": "failure_analysis",
+      "difficulty": "Advanced",
+      "question": "Name two failure modes that should be tested before release and describe a mitigation.",
+      "answer": "Malicious or compromised server: verify provenance and pin versions. Overprivileged server: restrict scopes. Sensitive output leakage: filter and minimise data. Protocol mismatch: version compatibility tests. Server outage: graceful fallback and user-visible status.",
+      "explanation": "Failure analysis should connect symptoms to causes, controls and recovery."
+    }
+  ],
+  "architect_challenge": {
+    "task": "Submit an MCP threat model, deployment boundary diagram, permission matrix and staged rollout plan.",
+    "rubric": [
+      "Requirements and constraints are explicit",
+      "Architecture choices are justified against alternatives",
+      "Trust and permission boundaries are enforced",
+      "Failure handling and evaluation are measurable",
+      "Operational ownership and rollback are documented"
+    ]
+  },
+  "further_reading": [
+    {
+      "title": "https://modelcontextprotocol.io/",
+      "url": "https://modelcontextprotocol.io/",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    },
+    {
+      "title": "https://docs.anthropic.com/",
+      "url": "https://docs.anthropic.com/",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    }
+  ],
+  "key_takeaways": [
+    "MCP is an open protocol for connecting AI applications to external tools and context providers. It standardises interaction patterns, but does not automatically make a server trusted, secure or correctly authorised.",
+    "One shared server versus per-domain servers: shared reduces operations but broadens permissions. Local process versus remote service: local can simplify network exposure but increases endpoint supply-chain and process risks. Broad tool catalogue versus narrow allowlist: flexibility must be balanced against attack surface.",
+    "Validate behaviour independently and measure outcomes.",
+    "Treat security, operations and governance as part of the architecture from the start."
+  ],
+  "tags": [
+    "d3",
+    "professional-architecture",
+    "implementation-lab",
+    "production-readiness"
+  ]
+}

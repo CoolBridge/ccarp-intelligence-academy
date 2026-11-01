@@ -1,0 +1,266 @@
+{
+  "schema_version": "2.0",
+  "id": "D2-L03",
+  "domain": "D2",
+  "title": "Model Selection, Structured Outputs and Response Contracts",
+  "difficulty": "Professional",
+  "estimated_minutes": 95,
+  "as_of": "2026-11-01",
+  "learning_outcomes": [
+    "Explain the core principles and boundaries of model selection, structured outputs and response contracts.",
+    "Select and justify an appropriate architecture pattern for a realistic system.",
+    "Identify failure modes, security risks and operational constraints.",
+    "Implement or evaluate a representative design using a repeatable lab.",
+    "Defend the design using measurable acceptance criteria and explicit trade-offs."
+  ],
+  "prerequisites": [
+    "Basic software engineering and system design",
+    "Foundational understanding of LLM applications",
+    "Familiarity with Python and JSON is helpful"
+  ],
+  "executive_orientation": "Model selection is an engineering decision based on task quality, latency, cost, context needs, reliability and operational constraints. Structured output makes integration safer, but schema validity is not the same as semantic correctness.",
+  "first_principles": "Do not select a model by benchmark headline alone. Define a task-specific evaluation set and compare candidate models on representative inputs. Determine whether the task needs reasoning, classification, extraction, synthesis, code generation or multimodal interpretation. Match model capability to consequence and complexity. Use smaller or deterministic components where they meet requirements.",
+  "technical_deep_dive": "Create a model decision matrix covering quality, latency, price, context capacity, tool support, data handling, availability and version lifecycle. Separate response formatting from factual verification. Define a machine-readable contract with required fields, enums, bounds and null semantics. Validate syntactic structure, semantic constraints and source grounding as separate layers. Version the model identifier and contract; rerun evaluations when either changes.",
+  "architecture_pattern": {
+    "when_to_use": [
+      "The task has multiple components or competing requirements.",
+      "Quality, security, latency or cost must be measured and defended.",
+      "The system will be operated and changed after initial release."
+    ],
+    "when_not_to_use": [
+      "A simpler deterministic process already meets the requirement.",
+      "The proposed design adds complexity without a measurable benefit."
+    ],
+    "alternatives": [
+      "A deterministic workflow or rules engine",
+      "A bounded model-assisted component with human review",
+      "A managed integration with narrower permissions"
+    ],
+    "decision_criteria": [
+      "Task variability and consequence of error",
+      "Data sensitivity and permission boundaries",
+      "Latency, reliability and cost envelope",
+      "Operational ownership and maintainability",
+      "Ability to test and reverse the decision"
+    ]
+  },
+  "diagram_mermaid": "flowchart TD\n A[Task profile and risk] --> B[Candidate shortlist]\n B --> C[Representative evaluation set]\n C --> D[Quality, latency and cost measurement]\n D --> E[Select model and fallback]\n E --> F[Structured response contract]\n F --> G[Syntax validation]\n G --> H[Semantic and evidence validation]\n H --> I[Accept or escalate]",
+  "worked_example": {
+    "scenario": "A public health knowledge assistant must classify questions, extract district names and produce a short evidence summary. Classification may use a small model or deterministic rules; evidence synthesis may require a stronger model. The architecture routes by task type and validates district codes against an authoritative list.",
+    "assumptions": [
+      "The use case has an identified owner and approved purpose.",
+      "The system has defined access boundaries and representative test data.",
+      "Consequential actions are subject to policy and human oversight where required."
+    ],
+    "walkthrough": [
+      "Clarify the user outcome and define measurable success.",
+      "Map inputs, data sources, trust boundaries and system dependencies.",
+      "Select the simplest architecture that meets requirements.",
+      "Define interfaces, state transitions, validation and failure handling.",
+      "Implement a bounded proof of concept with synthetic or approved data.",
+      "Evaluate normal, edge, adversarial and degraded scenarios.",
+      "Document the decision, limitations, owner and release conditions."
+    ],
+    "expected_result": "A documented architecture with explicit assumptions, testable acceptance criteria, controlled failure behaviour and a clear operational owner."
+  },
+  "implementation_lab": {
+    "objective": "Define a candidate scorecard with weighted quality, latency, cost and risk. Create a small labelled test set. Write a JSON schema for a response containing category, entities, summary and evidence_ids. Implement deterministic validation for required fields and known district identifiers.",
+    "steps": [
+      "Write down the requirements and assumptions before coding.",
+      "Implement the smallest deterministic representation of the control or design.",
+      "Add at least three positive and three negative tests.",
+      "Record the expected output and compare actual behaviour.",
+      "Write a short architecture note explaining what the prototype does not prove."
+    ],
+    "code_language": "python",
+    "code": "ALLOWED_CATEGORIES = {'malaria', 'climate', 'operations', 'other'}\nDISTRICTS = {'LGA-001', 'LGA-002'}\n\ndef validate_result(x):\n    errors = []\n    if x.get('category') not in ALLOWED_CATEGORIES: errors.append('invalid category')\n    if not isinstance(x.get('summary'), str): errors.append('summary must be text')\n    if not set(x.get('evidence_ids', [])).issubset({'SRC-1','SRC-2'}): errors.append('unknown evidence id')\n    if x.get('district_id') not in DISTRICTS: errors.append('unknown district')\n    return {'valid': not errors, 'errors': errors}\n",
+    "verification": [
+      "Compare candidates on the same inputs; report confidence intervals or sample size caveats where possible. Use a fallback only when its behaviour is understood and evaluated. Keep deterministic validation independent of model output.",
+      "Run the exercise in a clean Python environment and retain the test evidence.",
+      "Identify which production concerns are outside the scope of this small lab."
+    ]
+  },
+  "tradeoffs": [
+    {
+      "dimension": "Complexity versus capability",
+      "option_a": "Use the simplest deterministic component",
+      "option_b": "Introduce model-driven or distributed orchestration",
+      "consideration": "One large model versus routed models: routing can reduce cost and latency but adds complexity and classification errors. Strict schema versus flexible response: strict contracts simplify integration but may fail on ambiguous inputs. Automatic repair versus human review: repair helps recover formatting errors but can hide semantic uncertainty."
+    },
+    {
+      "dimension": "Automation versus oversight",
+      "option_a": "Automate the complete path",
+      "option_b": "Require human review at consequential boundaries",
+      "consideration": "Automation reduces handling effort; oversight provides accountability and recovery. Choose based on impact, reversibility and evidence of reliability."
+    },
+    {
+      "dimension": "Speed versus assurance",
+      "option_a": "Release quickly with limited checks",
+      "option_b": "Use staged rollout and layered evaluation",
+      "consideration": "A faster release is not beneficial if it increases downstream failure cost or makes recovery difficult."
+    }
+  ],
+  "failure_modes": [
+    {
+      "failure": "Ambiguous requirements",
+      "symptoms": "Stakeholders disagree about success or the system solves the wrong problem",
+      "cause": "Assumptions were not validated",
+      "mitigation": "Use measurable outcomes, examples and sign-off",
+      "recovery": "Pause scope expansion and re-baseline requirements."
+    },
+    {
+      "failure": "Boundary or permission failure",
+      "symptoms": "Data or actions are available to an unintended user or component",
+      "cause": "Authorization was assumed rather than enforced",
+      "mitigation": "Enforce least privilege at the service boundary",
+      "recovery": "Revoke access, investigate logs and remediate exposure."
+    },
+    {
+      "failure": "Unvalidated output or state",
+      "symptoms": "Malformed, inconsistent or unsupported result reaches downstream system",
+      "cause": "Trust was placed in model output without independent checks",
+      "mitigation": "Use schemas, semantic validation and source checks",
+      "recovery": "Quarantine result and route for review."
+    },
+    {
+      "failure": "Dependency or service outage",
+      "symptoms": "Requests time out or tasks remain incomplete",
+      "cause": "No bounded retry, fallback or recovery path",
+      "mitigation": "Use timeouts, circuit breakers, durable state and runbooks",
+      "recovery": "Enter degraded mode and reconcile pending work."
+    },
+    {
+      "failure": "Unobserved quality drift",
+      "symptoms": "Users report declining quality despite healthy uptime",
+      "cause": "Only infrastructure metrics were monitored",
+      "mitigation": "Track task-level quality and review samples",
+      "recovery": "Roll back or adjust the affected component and rerun evaluation."
+    }
+  ],
+  "security_governance": [
+    "Use approved data handling settings for the selected platform. Do not route sensitive data to a model without approval. Record model/version and contract version. Ensure fallback models meet the same security and quality requirements.",
+    "Use least privilege and enforce access decisions outside the model.",
+    "Treat external content and tool results as untrusted data.",
+    "Minimise data collection and retention; keep secrets out of prompts and logs.",
+    "Record decisions and approvals with enough metadata for audit and incident review."
+  ],
+  "evaluation": {
+    "metrics": [
+      "Task completion and critical error rate",
+      "Latency percentiles and resource consumption",
+      "Validation and policy-denial rates",
+      "Human override or escalation rate",
+      "Cost per successfully completed task"
+    ],
+    "test_design": [
+      "Representative normal cases",
+      "Boundary and malformed-input cases",
+      "Adversarial or malicious-input cases",
+      "Timeout, unavailable dependency and partial-failure cases",
+      "Regression tests for every behaviour-affecting change"
+    ],
+    "acceptance_criteria": [
+      "No critical authorization or safety test fails.",
+      "Required output or interface contracts are validated.",
+      "Failure behaviour is observable and recoverable.",
+      "Performance meets the agreed operating envelope.",
+      "Known limitations and residual risks are documented."
+    ]
+  },
+  "production_checklist": [
+    "Model selection uses task-specific evidence.",
+    "A deterministic baseline is included.",
+    "Output schema and semantic validation are separate.",
+    "Fallback behaviour is tested.",
+    "Model and schema versions are recorded.",
+    "Quality, latency and cost are measured together."
+  ],
+  "case_study": {
+    "scenario": "Design a model-routing strategy for a financial operations assistant handling simple categorisation, complex exception analysis and regulated customer explanations. Explain which tasks should not use a model.",
+    "constraints": [
+      "Limited engineering time and operating budget",
+      "A need for accountable ownership and explainable decisions",
+      "Potential external dependencies and changing inputs",
+      "A requirement to preserve user trust and recover from failure"
+    ],
+    "task": "Submit a decision matrix, evaluation set, routing diagram, output schema and fallback plan.",
+    "rubric": [
+      "25% problem framing and requirements traceability",
+      "20% architecture and interface quality",
+      "20% security, privacy and failure handling",
+      "20% evaluation and operational readiness",
+      "15% clarity of trade-off defence"
+    ],
+    "exemplar_reasoning": "Use rules for deterministic category mappings where feasible; use a lower-cost model only if it meets the quality bar for simple language tasks; reserve stronger reasoning for complex exceptions; require human review for regulated explanations; never let a model independently approve a financial transaction."
+  },
+  "knowledge_check": [
+    {
+      "id": "D2-L03-Q1",
+      "type": "comprehension",
+      "difficulty": "Core",
+      "question": "What is the central architectural principle behind model selection, structured outputs and response contracts?",
+      "answer": "Model selection is an engineering decision based on task quality, latency, cost, context needs, reliability and operational constraints. Structured output makes integration safer, but schema validity is not the same as semantic correctness.",
+      "explanation": "A strong answer links the concept to requirements, system boundaries and measurable behaviour."
+    },
+    {
+      "id": "D2-L03-Q2",
+      "type": "scenario",
+      "difficulty": "Advanced",
+      "question": "A prototype succeeds on a happy-path demonstration. Is that sufficient for production approval? Explain the additional evidence required.",
+      "answer": "No. Require representative evaluation, negative and adversarial tests, authorization checks, failure recovery, operational metrics, ownership and documented limitations.",
+      "explanation": "A demo demonstrates possibility, not reliability, safety or operational readiness."
+    },
+    {
+      "id": "D2-L03-Q3",
+      "type": "architect_judgement",
+      "difficulty": "Advanced",
+      "question": "How should an architect justify choosing a more complex design over a simpler alternative?",
+      "answer": "Show that the simpler alternative fails a material requirement and that the added capability's benefits exceed its cost, risk and operational burden.",
+      "explanation": "Complexity needs evidence-based justification."
+    },
+    {
+      "id": "D2-L03-Q4",
+      "type": "failure_analysis",
+      "difficulty": "Advanced",
+      "question": "Name two failure modes that should be tested before release and describe a mitigation.",
+      "answer": "Benchmark overfitting: include realistic and edge-case samples. Model drift: pin versions where possible and monitor. Schema-valid hallucination: validate evidence and domain rules. Fallback mismatch: test degraded mode. Cost spike: set usage budgets and alerts.",
+      "explanation": "Failure analysis should connect symptoms to causes, controls and recovery."
+    }
+  ],
+  "architect_challenge": {
+    "task": "Submit a decision matrix, evaluation set, routing diagram, output schema and fallback plan.",
+    "rubric": [
+      "Requirements and constraints are explicit",
+      "Architecture choices are justified against alternatives",
+      "Trust and permission boundaries are enforced",
+      "Failure handling and evaluation are measurable",
+      "Operational ownership and rollback are documented"
+    ]
+  },
+  "further_reading": [
+    {
+      "title": "https://docs.anthropic.com/",
+      "url": "https://docs.anthropic.com/",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    },
+    {
+      "title": "https://www.anthropic.com/engineering",
+      "url": "https://www.anthropic.com/engineering",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    }
+  ],
+  "key_takeaways": [
+    "Model selection is an engineering decision based on task quality, latency, cost, context needs, reliability and operational constraints. Structured output makes integration safer, but schema validity is not the same as semantic correctness.",
+    "One large model versus routed models: routing can reduce cost and latency but adds complexity and classification errors. Strict schema versus flexible response: strict contracts simplify integration but may fail on ambiguous inputs. Automatic repair versus human review: repair helps recover formatting errors but can hide semantic uncertainty.",
+    "Validate behaviour independently and measure outcomes.",
+    "Treat security, operations and governance as part of the architecture from the start."
+  ],
+  "tags": [
+    "d2",
+    "professional-architecture",
+    "implementation-lab",
+    "production-readiness"
+  ]
+}

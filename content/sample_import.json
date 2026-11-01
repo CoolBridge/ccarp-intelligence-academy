@@ -1,0 +1,18 @@
+[
+  {
+    "id": "USER-Q001",
+    "domain": "D1",
+    "title": "Choose a workflow architecture",
+    "question": "A claims process has fixed steps and policy rules. Which design should you favour initially, and why?",
+    "options": [
+      "Fully autonomous multi-agent system",
+      "Deterministic workflow with explicit validation",
+      "Unrestricted tool-using agent",
+      "No monitoring is needed"
+    ],
+    "correct_answer": "B",
+    "explanation": "The process is predictable and rule-driven. A deterministic workflow is easier to test, govern and audit.",
+    "difficulty": "Easy",
+    "type": "single_select"
+  }
+]

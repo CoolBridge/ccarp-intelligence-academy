@@ -1,0 +1,266 @@
+{
+  "schema_version": "2.0",
+  "id": "D3-L01",
+  "domain": "D3",
+  "title": "Tool Use Architecture and Safe Execution",
+  "difficulty": "Professional",
+  "estimated_minutes": 95,
+  "as_of": "2026-11-01",
+  "learning_outcomes": [
+    "Explain the core principles and boundaries of tool use architecture and safe execution.",
+    "Select and justify an appropriate architecture pattern for a realistic system.",
+    "Identify failure modes, security risks and operational constraints.",
+    "Implement or evaluate a representative design using a repeatable lab.",
+    "Defend the design using measurable acceptance criteria and explicit trade-offs."
+  ],
+  "prerequisites": [
+    "Basic software engineering and system design",
+    "Foundational understanding of LLM applications",
+    "Familiarity with Python and JSON is helpful"
+  ],
+  "executive_orientation": "Tool use extends a model with controlled access to external capabilities. The model can propose a tool call, but the application owns validation, authorization, execution, side-effect control and result handling.",
+  "first_principles": "A tool is an interface to a capability: search a record, calculate a value, update a ticket or trigger a workflow. The tool contract must define name, purpose, input schema, output schema, permissions, side effects and failure behaviour. A model-generated tool request is untrusted input, even when it appears well-formed.",
+  "technical_deep_dive": "Design a tool loop: provide permitted tool descriptions; receive a proposed call; parse and validate arguments; authenticate the user; authorize the exact action and resource; apply policy and approval gates; execute with timeout and idempotency; normalise the result; return a bounded result to the model; validate final output. Avoid broad tools such as execute arbitrary SQL or run shell commands. Prefer narrow, typed capabilities.",
+  "architecture_pattern": {
+    "when_to_use": [
+      "The task has multiple components or competing requirements.",
+      "Quality, security, latency or cost must be measured and defended.",
+      "The system will be operated and changed after initial release."
+    ],
+    "when_not_to_use": [
+      "A simpler deterministic process already meets the requirement.",
+      "The proposed design adds complexity without a measurable benefit."
+    ],
+    "alternatives": [
+      "A deterministic workflow or rules engine",
+      "A bounded model-assisted component with human review",
+      "A managed integration with narrower permissions"
+    ],
+    "decision_criteria": [
+      "Task variability and consequence of error",
+      "Data sensitivity and permission boundaries",
+      "Latency, reliability and cost envelope",
+      "Operational ownership and maintainability",
+      "Ability to test and reverse the decision"
+    ]
+  },
+  "diagram_mermaid": "sequenceDiagram\n participant U as User\n participant O as Orchestrator\n participant M as Model\n participant T as Tool service\n U->>O: Request\n O->>M: Task and permitted tools\n M->>O: Proposed tool call\n O->>O: Validate schema and authorize\n O->>T: Execute bounded action\n T-->>O: Result or error\n O->>M: Tool result\n M-->>O: Final response\n O-->>U: Validated response",
+  "worked_example": {
+    "scenario": "A support assistant can look up an order and draft a cancellation request. It may read order status automatically, but cancellation requires checking ownership, eligibility and user confirmation. The cancel tool accepts only an order ID and idempotency key, not arbitrary SQL or free-form instructions.",
+    "assumptions": [
+      "The use case has an identified owner and approved purpose.",
+      "The system has defined access boundaries and representative test data.",
+      "Consequential actions are subject to policy and human oversight where required."
+    ],
+    "walkthrough": [
+      "Clarify the user outcome and define measurable success.",
+      "Map inputs, data sources, trust boundaries and system dependencies.",
+      "Select the simplest architecture that meets requirements.",
+      "Define interfaces, state transitions, validation and failure handling.",
+      "Implement a bounded proof of concept with synthetic or approved data.",
+      "Evaluate normal, edge, adversarial and degraded scenarios.",
+      "Document the decision, limitations, owner and release conditions."
+    ],
+    "expected_result": "A documented architecture with explicit assumptions, testable acceptance criteria, controlled failure behaviour and a clear operational owner."
+  },
+  "implementation_lab": {
+    "objective": "Create a tool registry with two tools: read_status and request_cancellation. Define JSON-like schemas, permission requirements and side-effect classification. Simulate calls and reject missing identifiers, unknown fields and unauthorized users.",
+    "steps": [
+      "Write down the requirements and assumptions before coding.",
+      "Implement the smallest deterministic representation of the control or design.",
+      "Add at least three positive and three negative tests.",
+      "Record the expected output and compare actual behaviour.",
+      "Write a short architecture note explaining what the prototype does not prove."
+    ],
+    "code_language": "python",
+    "code": "TOOLS = {\n 'read_status': {'side_effect': False, 'required': {'order_id'}},\n 'request_cancellation': {'side_effect': True, 'required': {'order_id', 'idempotency_key'}},\n}\n\ndef validate_tool_call(name, args, user_permissions):\n    if name not in TOOLS: return False, 'unknown tool'\n    spec = TOOLS[name]\n    if not spec['required'].issubset(args): return False, 'missing arguments'\n    if spec['side_effect'] and 'cancel_order' not in user_permissions:\n        return False, 'not authorized'\n    return True, 'validated; execution still requires policy checks'\n",
+    "verification": [
+      "Add schema validation, resource-level authorization, timeout, retry, idempotency and human approval for side effects. Demonstrate safe rejection paths before simulating successful calls.",
+      "Run the exercise in a clean Python environment and retain the test evidence.",
+      "Identify which production concerns are outside the scope of this small lab."
+    ]
+  },
+  "tradeoffs": [
+    {
+      "dimension": "Complexity versus capability",
+      "option_a": "Use the simplest deterministic component",
+      "option_b": "Introduce model-driven or distributed orchestration",
+      "consideration": "Broad versus narrow tools: broad tools are flexible but increase blast radius. Synchronous versus asynchronous execution: synchronous is simple but can exceed request timeouts. Automatic retries versus manual reconciliation: retries improve resilience only when operations are idempotent."
+    },
+    {
+      "dimension": "Automation versus oversight",
+      "option_a": "Automate the complete path",
+      "option_b": "Require human review at consequential boundaries",
+      "consideration": "Automation reduces handling effort; oversight provides accountability and recovery. Choose based on impact, reversibility and evidence of reliability."
+    },
+    {
+      "dimension": "Speed versus assurance",
+      "option_a": "Release quickly with limited checks",
+      "option_b": "Use staged rollout and layered evaluation",
+      "consideration": "A faster release is not beneficial if it increases downstream failure cost or makes recovery difficult."
+    }
+  ],
+  "failure_modes": [
+    {
+      "failure": "Ambiguous requirements",
+      "symptoms": "Stakeholders disagree about success or the system solves the wrong problem",
+      "cause": "Assumptions were not validated",
+      "mitigation": "Use measurable outcomes, examples and sign-off",
+      "recovery": "Pause scope expansion and re-baseline requirements."
+    },
+    {
+      "failure": "Boundary or permission failure",
+      "symptoms": "Data or actions are available to an unintended user or component",
+      "cause": "Authorization was assumed rather than enforced",
+      "mitigation": "Enforce least privilege at the service boundary",
+      "recovery": "Revoke access, investigate logs and remediate exposure."
+    },
+    {
+      "failure": "Unvalidated output or state",
+      "symptoms": "Malformed, inconsistent or unsupported result reaches downstream system",
+      "cause": "Trust was placed in model output without independent checks",
+      "mitigation": "Use schemas, semantic validation and source checks",
+      "recovery": "Quarantine result and route for review."
+    },
+    {
+      "failure": "Dependency or service outage",
+      "symptoms": "Requests time out or tasks remain incomplete",
+      "cause": "No bounded retry, fallback or recovery path",
+      "mitigation": "Use timeouts, circuit breakers, durable state and runbooks",
+      "recovery": "Enter degraded mode and reconcile pending work."
+    },
+    {
+      "failure": "Unobserved quality drift",
+      "symptoms": "Users report declining quality despite healthy uptime",
+      "cause": "Only infrastructure metrics were monitored",
+      "mitigation": "Track task-level quality and review samples",
+      "recovery": "Roll back or adjust the affected component and rerun evaluation."
+    }
+  ],
+  "security_governance": [
+    "Use least privilege, per-tool scopes, resource-level authorization, secret isolation and audit logging. Do not expose raw credentials to the model. Require explicit confirmation for consequential or irreversible actions.",
+    "Use least privilege and enforce access decisions outside the model.",
+    "Treat external content and tool results as untrusted data.",
+    "Minimise data collection and retention; keep secrets out of prompts and logs.",
+    "Record decisions and approvals with enough metadata for audit and incident review."
+  ],
+  "evaluation": {
+    "metrics": [
+      "Task completion and critical error rate",
+      "Latency percentiles and resource consumption",
+      "Validation and policy-denial rates",
+      "Human override or escalation rate",
+      "Cost per successfully completed task"
+    ],
+    "test_design": [
+      "Representative normal cases",
+      "Boundary and malformed-input cases",
+      "Adversarial or malicious-input cases",
+      "Timeout, unavailable dependency and partial-failure cases",
+      "Regression tests for every behaviour-affecting change"
+    ],
+    "acceptance_criteria": [
+      "No critical authorization or safety test fails.",
+      "Required output or interface contracts are validated.",
+      "Failure behaviour is observable and recoverable.",
+      "Performance meets the agreed operating envelope.",
+      "Known limitations and residual risks are documented."
+    ]
+  },
+  "production_checklist": [
+    "Tool contracts are narrow and typed.",
+    "Application code validates every proposed call.",
+    "Authorization is checked for each resource and action.",
+    "Side effects use idempotency and approval controls.",
+    "Tool outputs are treated as untrusted.",
+    "Failures are observable and recoverable."
+  ],
+  "case_study": {
+    "scenario": "An agent can access a CRM, email system and billing platform. Design tool boundaries for searching a customer, drafting an email, sending an email, issuing a refund and updating a customer record.",
+    "constraints": [
+      "Limited engineering time and operating budget",
+      "A need for accountable ownership and explainable decisions",
+      "Potential external dependencies and changing inputs",
+      "A requirement to preserve user trust and recover from failure"
+    ],
+    "task": "Produce a tool catalogue, permission matrix, schema definitions, failure-handling policy and abuse-case tests.",
+    "rubric": [
+      "25% problem framing and requirements traceability",
+      "20% architecture and interface quality",
+      "20% security, privacy and failure handling",
+      "20% evaluation and operational readiness",
+      "15% clarity of trade-off defence"
+    ],
+    "exemplar_reasoning": "Separate read and write capabilities; allow draft generation without sending; require role and transaction checks for refunds; require explicit confirmation before send; log the actor, resource, parameters and result; avoid a generic admin tool."
+  },
+  "knowledge_check": [
+    {
+      "id": "D3-L01-Q1",
+      "type": "comprehension",
+      "difficulty": "Core",
+      "question": "What is the central architectural principle behind tool use architecture and safe execution?",
+      "answer": "Tool use extends a model with controlled access to external capabilities. The model can propose a tool call, but the application owns validation, authorization, execution, side-effect control and result handling.",
+      "explanation": "A strong answer links the concept to requirements, system boundaries and measurable behaviour."
+    },
+    {
+      "id": "D3-L01-Q2",
+      "type": "scenario",
+      "difficulty": "Advanced",
+      "question": "A prototype succeeds on a happy-path demonstration. Is that sufficient for production approval? Explain the additional evidence required.",
+      "answer": "No. Require representative evaluation, negative and adversarial tests, authorization checks, failure recovery, operational metrics, ownership and documented limitations.",
+      "explanation": "A demo demonstrates possibility, not reliability, safety or operational readiness."
+    },
+    {
+      "id": "D3-L01-Q3",
+      "type": "architect_judgement",
+      "difficulty": "Advanced",
+      "question": "How should an architect justify choosing a more complex design over a simpler alternative?",
+      "answer": "Show that the simpler alternative fails a material requirement and that the added capability's benefits exceed its cost, risk and operational burden.",
+      "explanation": "Complexity needs evidence-based justification."
+    },
+    {
+      "id": "D3-L01-Q4",
+      "type": "failure_analysis",
+      "difficulty": "Advanced",
+      "question": "Name two failure modes that should be tested before release and describe a mitigation.",
+      "answer": "Argument injection: validate types and bounds. Confused deputy: authorize the actual user and resource. Duplicate side effects: idempotency keys. Tool timeout: bounded retries and status lookup. Tool output injection: treat results as untrusted evidence.",
+      "explanation": "Failure analysis should connect symptoms to causes, controls and recovery."
+    }
+  ],
+  "architect_challenge": {
+    "task": "Produce a tool catalogue, permission matrix, schema definitions, failure-handling policy and abuse-case tests.",
+    "rubric": [
+      "Requirements and constraints are explicit",
+      "Architecture choices are justified against alternatives",
+      "Trust and permission boundaries are enforced",
+      "Failure handling and evaluation are measurable",
+      "Operational ownership and rollback are documented"
+    ]
+  },
+  "further_reading": [
+    {
+      "title": "https://docs.anthropic.com/",
+      "url": "https://docs.anthropic.com/",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    },
+    {
+      "title": "https://modelcontextprotocol.io/",
+      "url": "https://modelcontextprotocol.io/",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    }
+  ],
+  "key_takeaways": [
+    "Tool use extends a model with controlled access to external capabilities. The model can propose a tool call, but the application owns validation, authorization, execution, side-effect control and result handling.",
+    "Broad versus narrow tools: broad tools are flexible but increase blast radius. Synchronous versus asynchronous execution: synchronous is simple but can exceed request timeouts. Automatic retries versus manual reconciliation: retries improve resilience only when operations are idempotent.",
+    "Validate behaviour independently and measure outcomes.",
+    "Treat security, operations and governance as part of the architecture from the start."
+  ],
+  "tags": [
+    "d3",
+    "professional-architecture",
+    "implementation-lab",
+    "production-readiness"
+  ]
+}

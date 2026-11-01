@@ -1,0 +1,266 @@
+{
+  "schema_version": "2.0",
+  "id": "D4-L05",
+  "domain": "D4",
+  "title": "Performance Optimisation, Caching and Cost Engineering",
+  "difficulty": "Professional",
+  "estimated_minutes": 95,
+  "as_of": "2026-11-01",
+  "learning_outcomes": [
+    "Explain the core principles and boundaries of performance optimisation, caching and cost engineering.",
+    "Select and justify an appropriate architecture pattern for a realistic system.",
+    "Identify failure modes, security risks and operational constraints.",
+    "Implement or evaluate a representative design using a repeatable lab.",
+    "Defend the design using measurable acceptance criteria and explicit trade-offs."
+  ],
+  "prerequisites": [
+    "Basic software engineering and system design",
+    "Foundational understanding of LLM applications",
+    "Familiarity with Python and JSON is helpful"
+  ],
+  "executive_orientation": "Optimisation is a constrained search for lower latency and cost without unacceptable loss of quality, freshness, security or reliability. Measure the workload before tuning.",
+  "first_principles": "Decompose cost and latency by request stage: input context, model generation, retrieval, tool calls, network overhead and retries. Identify high-volume paths and repeated work. Caching can reduce repeated computation but introduces freshness, invalidation, access-control and correctness concerns. Optimise successful task cost, not merely tokens per call.",
+  "technical_deep_dive": "Use prompt/context reduction, retrieval filtering, caching of stable data, batching where appropriate, concurrency controls, model routing and asynchronous execution. Keep cache keys scoped to user permissions and relevant context. Set TTLs based on data volatility. Never cache private outputs across users. Re-evaluate answer quality after each optimisation.",
+  "architecture_pattern": {
+    "when_to_use": [
+      "The task has multiple components or competing requirements.",
+      "Quality, security, latency or cost must be measured and defended.",
+      "The system will be operated and changed after initial release."
+    ],
+    "when_not_to_use": [
+      "A simpler deterministic process already meets the requirement.",
+      "The proposed design adds complexity without a measurable benefit."
+    ],
+    "alternatives": [
+      "A deterministic workflow or rules engine",
+      "A bounded model-assisted component with human review",
+      "A managed integration with narrower permissions"
+    ],
+    "decision_criteria": [
+      "Task variability and consequence of error",
+      "Data sensitivity and permission boundaries",
+      "Latency, reliability and cost envelope",
+      "Operational ownership and maintainability",
+      "Ability to test and reverse the decision"
+    ]
+  },
+  "diagram_mermaid": "flowchart TD\n A[Measure baseline] --> B[Identify bottleneck]\n B --> C[Choose optimisation]\n C --> D[Define cache key and freshness if caching]\n D --> E[Implement controlled change]\n E --> F[Quality and performance evaluation]\n F --> G{Quality preserved?}\n G -->|Yes| H[Release and monitor]\n G -->|No| I[Rollback or revise]",
+  "worked_example": {
+    "scenario": "A policy assistant repeatedly retrieves the same public policy section. Cache the document representation with a version-aware key and short TTL, while always applying the user's access permissions at query time.",
+    "assumptions": [
+      "The use case has an identified owner and approved purpose.",
+      "The system has defined access boundaries and representative test data.",
+      "Consequential actions are subject to policy and human oversight where required."
+    ],
+    "walkthrough": [
+      "Clarify the user outcome and define measurable success.",
+      "Map inputs, data sources, trust boundaries and system dependencies.",
+      "Select the simplest architecture that meets requirements.",
+      "Define interfaces, state transitions, validation and failure handling.",
+      "Implement a bounded proof of concept with synthetic or approved data.",
+      "Evaluate normal, edge, adversarial and degraded scenarios.",
+      "Document the decision, limitations, owner and release conditions."
+    ],
+    "expected_result": "A documented architecture with explicit assumptions, testable acceptance criteria, controlled failure behaviour and a clear operational owner."
+  },
+  "implementation_lab": {
+    "objective": "Create a simple cache simulator with TTL and version key. Demonstrate cache hit, expiry and invalidation when source version changes. Explain why permission scope belongs in a cache key for user-specific results.",
+    "steps": [
+      "Write down the requirements and assumptions before coding.",
+      "Implement the smallest deterministic representation of the control or design.",
+      "Add at least three positive and three negative tests.",
+      "Record the expected output and compare actual behaviour.",
+      "Write a short architecture note explaining what the prototype does not prove."
+    ],
+    "code_language": "python",
+    "code": "cache = {}\n\ndef get_cached(key, version, now, ttl=60):\n    item=cache.get((key,version))\n    if item and now-item['time'] < ttl: return item['value'], 'HIT'\n    return None, 'MISS'\n\ndef put(key, version, value, now):\n    cache[(key,version)]={'value':value,'time':now}\n",
+    "verification": [
+      "Measure hit rate, stale response rate, latency saved and cost saved. Test permission changes, source updates and concurrent requests. Roll back if relevance or correctness declines.",
+      "Run the exercise in a clean Python environment and retain the test evidence.",
+      "Identify which production concerns are outside the scope of this small lab."
+    ]
+  },
+  "tradeoffs": [
+    {
+      "dimension": "Complexity versus capability",
+      "option_a": "Use the simplest deterministic component",
+      "option_b": "Introduce model-driven or distributed orchestration",
+      "consideration": "Cache versus live retrieval; smaller context versus fuller evidence; lower-cost model versus stronger model; batching versus interactive latency. Every optimisation must be judged against quality and risk."
+    },
+    {
+      "dimension": "Automation versus oversight",
+      "option_a": "Automate the complete path",
+      "option_b": "Require human review at consequential boundaries",
+      "consideration": "Automation reduces handling effort; oversight provides accountability and recovery. Choose based on impact, reversibility and evidence of reliability."
+    },
+    {
+      "dimension": "Speed versus assurance",
+      "option_a": "Release quickly with limited checks",
+      "option_b": "Use staged rollout and layered evaluation",
+      "consideration": "A faster release is not beneficial if it increases downstream failure cost or makes recovery difficult."
+    }
+  ],
+  "failure_modes": [
+    {
+      "failure": "Ambiguous requirements",
+      "symptoms": "Stakeholders disagree about success or the system solves the wrong problem",
+      "cause": "Assumptions were not validated",
+      "mitigation": "Use measurable outcomes, examples and sign-off",
+      "recovery": "Pause scope expansion and re-baseline requirements."
+    },
+    {
+      "failure": "Boundary or permission failure",
+      "symptoms": "Data or actions are available to an unintended user or component",
+      "cause": "Authorization was assumed rather than enforced",
+      "mitigation": "Enforce least privilege at the service boundary",
+      "recovery": "Revoke access, investigate logs and remediate exposure."
+    },
+    {
+      "failure": "Unvalidated output or state",
+      "symptoms": "Malformed, inconsistent or unsupported result reaches downstream system",
+      "cause": "Trust was placed in model output without independent checks",
+      "mitigation": "Use schemas, semantic validation and source checks",
+      "recovery": "Quarantine result and route for review."
+    },
+    {
+      "failure": "Dependency or service outage",
+      "symptoms": "Requests time out or tasks remain incomplete",
+      "cause": "No bounded retry, fallback or recovery path",
+      "mitigation": "Use timeouts, circuit breakers, durable state and runbooks",
+      "recovery": "Enter degraded mode and reconcile pending work."
+    },
+    {
+      "failure": "Unobserved quality drift",
+      "symptoms": "Users report declining quality despite healthy uptime",
+      "cause": "Only infrastructure metrics were monitored",
+      "mitigation": "Track task-level quality and review samples",
+      "recovery": "Roll back or adjust the affected component and rerun evaluation."
+    }
+  ],
+  "security_governance": [
+    "Do not cache sensitive outputs without a clear isolation model. Honour deletion and access revocation. Ensure cache invalidation follows source updates and permissions.",
+    "Use least privilege and enforce access decisions outside the model.",
+    "Treat external content and tool results as untrusted data.",
+    "Minimise data collection and retention; keep secrets out of prompts and logs.",
+    "Record decisions and approvals with enough metadata for audit and incident review."
+  ],
+  "evaluation": {
+    "metrics": [
+      "Task completion and critical error rate",
+      "Latency percentiles and resource consumption",
+      "Validation and policy-denial rates",
+      "Human override or escalation rate",
+      "Cost per successfully completed task"
+    ],
+    "test_design": [
+      "Representative normal cases",
+      "Boundary and malformed-input cases",
+      "Adversarial or malicious-input cases",
+      "Timeout, unavailable dependency and partial-failure cases",
+      "Regression tests for every behaviour-affecting change"
+    ],
+    "acceptance_criteria": [
+      "No critical authorization or safety test fails.",
+      "Required output or interface contracts are validated.",
+      "Failure behaviour is observable and recoverable.",
+      "Performance meets the agreed operating envelope.",
+      "Known limitations and residual risks are documented."
+    ]
+  },
+  "production_checklist": [
+    "Baseline cost and latency are measured.",
+    "Optimisation targets a measured bottleneck.",
+    "Cache keys include version and permission scope where needed.",
+    "Freshness and invalidation are defined.",
+    "Quality is re-evaluated after optimisation.",
+    "Rollback is available."
+  ],
+  "case_study": {
+    "scenario": "Your team reduces token usage by aggressively summarising retrieved documents, but answer completeness drops. Design a balanced optimisation strategy.",
+    "constraints": [
+      "Limited engineering time and operating budget",
+      "A need for accountable ownership and explainable decisions",
+      "Potential external dependencies and changing inputs",
+      "A requirement to preserve user trust and recover from failure"
+    ],
+    "task": "Submit a cost model, latency profile, caching strategy and quality-preserving optimisation experiment.",
+    "rubric": [
+      "25% problem framing and requirements traceability",
+      "20% architecture and interface quality",
+      "20% security, privacy and failure handling",
+      "20% evaluation and operational readiness",
+      "15% clarity of trade-off defence"
+    ],
+    "exemplar_reasoning": "Measure relevance and omission rates; preserve critical facts and source pointers; tune chunk selection and summary fidelity; reserve tokens for evidence; compare alternative context budgets; optimise cost per correct task rather than raw token count."
+  },
+  "knowledge_check": [
+    {
+      "id": "D4-L05-Q1",
+      "type": "comprehension",
+      "difficulty": "Core",
+      "question": "What is the central architectural principle behind performance optimisation, caching and cost engineering?",
+      "answer": "Optimisation is a constrained search for lower latency and cost without unacceptable loss of quality, freshness, security or reliability. Measure the workload before tuning.",
+      "explanation": "A strong answer links the concept to requirements, system boundaries and measurable behaviour."
+    },
+    {
+      "id": "D4-L05-Q2",
+      "type": "scenario",
+      "difficulty": "Advanced",
+      "question": "A prototype succeeds on a happy-path demonstration. Is that sufficient for production approval? Explain the additional evidence required.",
+      "answer": "No. Require representative evaluation, negative and adversarial tests, authorization checks, failure recovery, operational metrics, ownership and documented limitations.",
+      "explanation": "A demo demonstrates possibility, not reliability, safety or operational readiness."
+    },
+    {
+      "id": "D4-L05-Q3",
+      "type": "architect_judgement",
+      "difficulty": "Advanced",
+      "question": "How should an architect justify choosing a more complex design over a simpler alternative?",
+      "answer": "Show that the simpler alternative fails a material requirement and that the added capability's benefits exceed its cost, risk and operational burden.",
+      "explanation": "Complexity needs evidence-based justification."
+    },
+    {
+      "id": "D4-L05-Q4",
+      "type": "failure_analysis",
+      "difficulty": "Advanced",
+      "question": "Name two failure modes that should be tested before release and describe a mitigation.",
+      "answer": "Stale cache: use version and TTL. Cross-user leakage: scope cache keys. Cache stampede: request coalescing. Over-compression: evaluate lost evidence. Cost shifting: measure end-to-end cost.",
+      "explanation": "Failure analysis should connect symptoms to causes, controls and recovery."
+    }
+  ],
+  "architect_challenge": {
+    "task": "Submit a cost model, latency profile, caching strategy and quality-preserving optimisation experiment.",
+    "rubric": [
+      "Requirements and constraints are explicit",
+      "Architecture choices are justified against alternatives",
+      "Trust and permission boundaries are enforced",
+      "Failure handling and evaluation are measurable",
+      "Operational ownership and rollback are documented"
+    ]
+  },
+  "further_reading": [
+    {
+      "title": "https://docs.anthropic.com/",
+      "url": "https://docs.anthropic.com/",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    },
+    {
+      "title": "https://www.anthropic.com/engineering",
+      "url": "https://www.anthropic.com/engineering",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    }
+  ],
+  "key_takeaways": [
+    "Optimisation is a constrained search for lower latency and cost without unacceptable loss of quality, freshness, security or reliability. Measure the workload before tuning.",
+    "Cache versus live retrieval; smaller context versus fuller evidence; lower-cost model versus stronger model; batching versus interactive latency. Every optimisation must be judged against quality and risk.",
+    "Validate behaviour independently and measure outcomes.",
+    "Treat security, operations and governance as part of the architecture from the start."
+  ],
+  "tags": [
+    "d4",
+    "professional-architecture",
+    "implementation-lab",
+    "production-readiness"
+  ]
+}

@@ -1,0 +1,265 @@
+{
+  "schema_version": "2.0",
+  "id": "D1-L05",
+  "domain": "D1",
+  "title": "Human-in-the-Loop Design and Approval Gates",
+  "difficulty": "Professional",
+  "estimated_minutes": 95,
+  "as_of": "2026-11-01",
+  "learning_outcomes": [
+    "Explain the core principles and boundaries of human-in-the-loop design and approval gates.",
+    "Select and justify an appropriate architecture pattern for a realistic system.",
+    "Identify failure modes, security risks and operational constraints.",
+    "Implement or evaluate a representative design using a repeatable lab.",
+    "Defend the design using measurable acceptance criteria and explicit trade-offs."
+  ],
+  "prerequisites": [
+    "Basic software engineering and system design",
+    "Foundational understanding of LLM applications",
+    "Familiarity with Python and JSON is helpful"
+  ],
+  "executive_orientation": "Human oversight is effective only when the human receives meaningful evidence, has authority to intervene and can do so before an irreversible action. A confirmation button alone is not a governance strategy.",
+  "first_principles": "Human-in-the-loop patterns include review-before-action, escalation-on-uncertainty, sampled quality review and human correction. Choose the pattern based on consequence, reversibility, uncertainty and reviewer capacity. Design for human factors: cognitive load, automation bias, alert fatigue and clear responsibility.",
+  "technical_deep_dive": "Define the decision boundary, trigger conditions, evidence packet, reviewer role, response deadline, override path and audit record. Separate recommendation from execution. Require explicit confirmation for high-impact actions and verify that approval applies to the exact action, target and amount. Make uncertainty and missing evidence visible.",
+  "architecture_pattern": {
+    "when_to_use": [
+      "The task has multiple components or competing requirements.",
+      "Quality, security, latency or cost must be measured and defended.",
+      "The system will be operated and changed after initial release."
+    ],
+    "when_not_to_use": [
+      "A simpler deterministic process already meets the requirement.",
+      "The proposed design adds complexity without a measurable benefit."
+    ],
+    "alternatives": [
+      "A deterministic workflow or rules engine",
+      "A bounded model-assisted component with human review",
+      "A managed integration with narrower permissions"
+    ],
+    "decision_criteria": [
+      "Task variability and consequence of error",
+      "Data sensitivity and permission boundaries",
+      "Latency, reliability and cost envelope",
+      "Operational ownership and maintainability",
+      "Ability to test and reverse the decision"
+    ]
+  },
+  "diagram_mermaid": "flowchart TD\n A[Model recommendation] --> B[Risk and confidence checks]\n B --> C{Review required?}\n C -->|No, low risk| D[Automated bounded step]\n C -->|Yes| E[Human review with evidence]\n E --> F{Approve, reject or request more info}\n F --> G[Authorized action or escalation]",
+  "worked_example": {
+    "scenario": "A health operations assistant identifies facilities needing stock redistribution. It can rank candidates and explain evidence, but a programme officer confirms quantities and destination because the action affects essential supplies.",
+    "assumptions": [
+      "The use case has an identified owner and approved purpose.",
+      "The system has defined access boundaries and representative test data.",
+      "Consequential actions are subject to policy and human oversight where required."
+    ],
+    "walkthrough": [
+      "Clarify the user outcome and define measurable success.",
+      "Map inputs, data sources, trust boundaries and system dependencies.",
+      "Select the simplest architecture that meets requirements.",
+      "Define interfaces, state transitions, validation and failure handling.",
+      "Implement a bounded proof of concept with synthetic or approved data.",
+      "Evaluate normal, edge, adversarial and degraded scenarios.",
+      "Document the decision, limitations, owner and release conditions."
+    ],
+    "expected_result": "A documented architecture with explicit assumptions, testable acceptance criteria, controlled failure behaviour and a clear operational owner."
+  },
+  "implementation_lab": {
+    "objective": "Design an approval form for a high-impact agent action. Specify the evidence a reviewer sees, approval identity, exact action payload, expiry, reject path and audit fields. Simulate an approval that expires before execution.",
+    "steps": [
+      "Write down the requirements and assumptions before coding.",
+      "Implement the smallest deterministic representation of the control or design.",
+      "Add at least three positive and three negative tests.",
+      "Record the expected output and compare actual behaviour.",
+      "Write a short architecture note explaining what the prototype does not prove."
+    ],
+    "code_language": "python",
+    "code": "from datetime import datetime, timedelta\n\ndef approval_valid(approved_at, action_hash, requested_hash, now=None):\n    now = now or datetime.utcnow()\n    return action_hash == requested_hash and now <= approved_at + timedelta(minutes=10)\n\nprint(approval_valid(datetime.utcnow(), 'abc', 'abc'))\n",
+    "verification": [
+      "Test stale approval, changed target, duplicate execution, reviewer absence and conflicting approvals. Ensure the approved payload is cryptographically or logically bound to the action executed.",
+      "Run the exercise in a clean Python environment and retain the test evidence.",
+      "Identify which production concerns are outside the scope of this small lab."
+    ]
+  },
+  "tradeoffs": [
+    {
+      "dimension": "Complexity versus capability",
+      "option_a": "Use the simplest deterministic component",
+      "option_b": "Introduce model-driven or distributed orchestration",
+      "consideration": "Review every case versus risk-based review: universal review can bottleneck; risk-based review depends on good classification. Pre-action approval versus post-action audit: pre-action prevents harm; post-action is useful for low-risk reversible tasks."
+    },
+    {
+      "dimension": "Automation versus oversight",
+      "option_a": "Automate the complete path",
+      "option_b": "Require human review at consequential boundaries",
+      "consideration": "Automation reduces handling effort; oversight provides accountability and recovery. Choose based on impact, reversibility and evidence of reliability."
+    },
+    {
+      "dimension": "Speed versus assurance",
+      "option_a": "Release quickly with limited checks",
+      "option_b": "Use staged rollout and layered evaluation",
+      "consideration": "A faster release is not beneficial if it increases downstream failure cost or makes recovery difficult."
+    }
+  ],
+  "failure_modes": [
+    {
+      "failure": "Ambiguous requirements",
+      "symptoms": "Stakeholders disagree about success or the system solves the wrong problem",
+      "cause": "Assumptions were not validated",
+      "mitigation": "Use measurable outcomes, examples and sign-off",
+      "recovery": "Pause scope expansion and re-baseline requirements."
+    },
+    {
+      "failure": "Boundary or permission failure",
+      "symptoms": "Data or actions are available to an unintended user or component",
+      "cause": "Authorization was assumed rather than enforced",
+      "mitigation": "Enforce least privilege at the service boundary",
+      "recovery": "Revoke access, investigate logs and remediate exposure."
+    },
+    {
+      "failure": "Unvalidated output or state",
+      "symptoms": "Malformed, inconsistent or unsupported result reaches downstream system",
+      "cause": "Trust was placed in model output without independent checks",
+      "mitigation": "Use schemas, semantic validation and source checks",
+      "recovery": "Quarantine result and route for review."
+    },
+    {
+      "failure": "Dependency or service outage",
+      "symptoms": "Requests time out or tasks remain incomplete",
+      "cause": "No bounded retry, fallback or recovery path",
+      "mitigation": "Use timeouts, circuit breakers, durable state and runbooks",
+      "recovery": "Enter degraded mode and reconcile pending work."
+    },
+    {
+      "failure": "Unobserved quality drift",
+      "symptoms": "Users report declining quality despite healthy uptime",
+      "cause": "Only infrastructure metrics were monitored",
+      "mitigation": "Track task-level quality and review samples",
+      "recovery": "Roll back or adjust the affected component and rerun evaluation."
+    }
+  ],
+  "security_governance": [
+    "Define reviewer authority, training, conflicts of interest and escalation. Preserve audit records and user recourse. Do not present a model recommendation as a final human decision.",
+    "Use least privilege and enforce access decisions outside the model.",
+    "Treat external content and tool results as untrusted data.",
+    "Minimise data collection and retention; keep secrets out of prompts and logs.",
+    "Record decisions and approvals with enough metadata for audit and incident review."
+  ],
+  "evaluation": {
+    "metrics": [
+      "Task completion and critical error rate",
+      "Latency percentiles and resource consumption",
+      "Validation and policy-denial rates",
+      "Human override or escalation rate",
+      "Cost per successfully completed task"
+    ],
+    "test_design": [
+      "Representative normal cases",
+      "Boundary and malformed-input cases",
+      "Adversarial or malicious-input cases",
+      "Timeout, unavailable dependency and partial-failure cases",
+      "Regression tests for every behaviour-affecting change"
+    ],
+    "acceptance_criteria": [
+      "No critical authorization or safety test fails.",
+      "Required output or interface contracts are validated.",
+      "Failure behaviour is observable and recoverable.",
+      "Performance meets the agreed operating envelope.",
+      "Known limitations and residual risks are documented."
+    ]
+  },
+  "production_checklist": [
+    "Human role and authority are explicit.",
+    "Reviewers see evidence, uncertainty and alternatives.",
+    "Approval is bound to exact action and expires.",
+    "High-impact actions cannot bypass review.",
+    "Review capacity and escalation are planned."
+  ],
+  "case_study": {
+    "scenario": "An agent proposes to deactivate user accounts flagged as compromised. Design human oversight and safe automation boundaries.",
+    "constraints": [
+      "Limited engineering time and operating budget",
+      "A need for accountable ownership and explainable decisions",
+      "Potential external dependencies and changing inputs",
+      "A requirement to preserve user trust and recover from failure"
+    ],
+    "task": "Submit a human oversight workflow, reviewer interface specification and approval abuse-case tests.",
+    "rubric": [
+      "25% problem framing and requirements traceability",
+      "20% architecture and interface quality",
+      "20% security, privacy and failure handling",
+      "20% evaluation and operational readiness",
+      "15% clarity of trade-off defence"
+    ],
+    "exemplar_reasoning": "Automate evidence collection and temporary low-impact protective measures only under approved policy; require human confirmation for permanent deactivation; provide account evidence and false-positive risks; bind approval to account ID and action; support appeal and reversal."
+  },
+  "knowledge_check": [
+    {
+      "id": "D1-L05-Q1",
+      "type": "comprehension",
+      "difficulty": "Core",
+      "question": "What is the central architectural principle behind human-in-the-loop design and approval gates?",
+      "answer": "Human oversight is effective only when the human receives meaningful evidence, has authority to intervene and can do so before an irreversible action. A confirmation button alone is not a governance strategy.",
+      "explanation": "A strong answer links the concept to requirements, system boundaries and measurable behaviour."
+    },
+    {
+      "id": "D1-L05-Q2",
+      "type": "scenario",
+      "difficulty": "Advanced",
+      "question": "A prototype succeeds on a happy-path demonstration. Is that sufficient for production approval? Explain the additional evidence required.",
+      "answer": "No. Require representative evaluation, negative and adversarial tests, authorization checks, failure recovery, operational metrics, ownership and documented limitations.",
+      "explanation": "A demo demonstrates possibility, not reliability, safety or operational readiness."
+    },
+    {
+      "id": "D1-L05-Q3",
+      "type": "architect_judgement",
+      "difficulty": "Advanced",
+      "question": "How should an architect justify choosing a more complex design over a simpler alternative?",
+      "answer": "Show that the simpler alternative fails a material requirement and that the added capability's benefits exceed its cost, risk and operational burden.",
+      "explanation": "Complexity needs evidence-based justification."
+    },
+    {
+      "id": "D1-L05-Q4",
+      "type": "failure_analysis",
+      "difficulty": "Advanced",
+      "question": "Name two failure modes that should be tested before release and describe a mitigation.",
+      "answer": "Rubber-stamping: show evidence and alternatives. Approval replay: bind approval to payload and expiry. Alert fatigue: risk-tier and batch low-risk review. Unavailable reviewer: queue safely or fail closed for high-impact actions.",
+      "explanation": "Failure analysis should connect symptoms to causes, controls and recovery."
+    }
+  ],
+  "architect_challenge": {
+    "task": "Submit a human oversight workflow, reviewer interface specification and approval abuse-case tests.",
+    "rubric": [
+      "Requirements and constraints are explicit",
+      "Architecture choices are justified against alternatives",
+      "Trust and permission boundaries are enforced",
+      "Failure handling and evaluation are measurable",
+      "Operational ownership and rollback are documented"
+    ]
+  },
+  "further_reading": [
+    {
+      "title": "https://www.anthropic.com/engineering",
+      "url": "https://www.anthropic.com/engineering",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    },
+    {
+      "title": "https://docs.anthropic.com/",
+      "url": "https://docs.anthropic.com/",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    }
+  ],
+  "key_takeaways": [
+    "Human oversight is effective only when the human receives meaningful evidence, has authority to intervene and can do so before an irreversible action. A confirmation button alone is not a governance strategy.",
+    "Review every case versus risk-based review: universal review can bottleneck; risk-based review depends on good classification. Pre-action approval versus post-action audit: pre-action prevents harm; post-action is useful for low-risk reversible tasks.",
+    "Validate behaviour independently and measure outcomes.",
+    "Treat security, operations and governance as part of the architecture from the start."
+  ],
+  "tags": [
+    "d1",
+    "professional-architecture",
+    "implementation-lab",
+    "production-readiness"
+  ]
+}

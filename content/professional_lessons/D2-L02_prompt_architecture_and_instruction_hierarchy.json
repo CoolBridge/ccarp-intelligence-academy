@@ -1,0 +1,266 @@
+{
+  "schema_version": "2.0",
+  "id": "D2-L02",
+  "domain": "D2",
+  "title": "Prompt Architecture and Instruction Hierarchy",
+  "difficulty": "Professional",
+  "estimated_minutes": 95,
+  "as_of": "2026-11-01",
+  "learning_outcomes": [
+    "Explain the core principles and boundaries of prompt architecture and instruction hierarchy.",
+    "Select and justify an appropriate architecture pattern for a realistic system.",
+    "Identify failure modes, security risks and operational constraints.",
+    "Implement or evaluate a representative design using a repeatable lab.",
+    "Defend the design using measurable acceptance criteria and explicit trade-offs."
+  ],
+  "prerequisites": [
+    "Basic software engineering and system design",
+    "Foundational understanding of LLM applications",
+    "Familiarity with Python and JSON is helpful"
+  ],
+  "executive_orientation": "A production prompt is a versioned interface between application policy, task intent, untrusted inputs and model behaviour. Good prompt architecture is explicit, testable and supported by code-level controls.",
+  "first_principles": "Separate stable system-level behaviour, application/developer constraints, user task data and retrieved evidence. Avoid mixing instructions with content that should be analysed. A prompt should state role, task, context boundaries, output contract, uncertainty behaviour and refusal/escalation conditions. Prompt wording cannot replace authorization, validation or security controls in the application.",
+  "technical_deep_dive": "Use reusable prompt components with version identifiers. Define input schemas and output schemas. Delimit untrusted data and tell the model how to treat it, while remembering that textual delimiters are not a security boundary by themselves. Keep policy decisions in deterministic code. Use examples selectively; test for overfitting and instruction conflict. Store prompts with change history and regression cases. Design concise prompts that explain priority and task completion criteria.",
+  "architecture_pattern": {
+    "when_to_use": [
+      "The task has multiple components or competing requirements.",
+      "Quality, security, latency or cost must be measured and defended.",
+      "The system will be operated and changed after initial release."
+    ],
+    "when_not_to_use": [
+      "A simpler deterministic process already meets the requirement.",
+      "The proposed design adds complexity without a measurable benefit."
+    ],
+    "alternatives": [
+      "A deterministic workflow or rules engine",
+      "A bounded model-assisted component with human review",
+      "A managed integration with narrower permissions"
+    ],
+    "decision_criteria": [
+      "Task variability and consequence of error",
+      "Data sensitivity and permission boundaries",
+      "Latency, reliability and cost envelope",
+      "Operational ownership and maintainability",
+      "Ability to test and reverse the decision"
+    ]
+  },
+  "diagram_mermaid": "flowchart TD\n A[Application policy] --> B[Stable instructions]\n C[User task] --> D[Untrusted input section]\n E[Retrieved evidence] --> D\n B --> F[Prompt assembly]\n D --> F\n F --> G[Model output]\n G --> H[Schema and policy validation]\n H --> I[Accept, repair or escalate]",
+  "worked_example": {
+    "scenario": "An invoice extraction prompt must return supplier, invoice date, currency, total and confidence. The invoice itself is untrusted. The prompt defines extraction rules and a strict JSON contract; application code validates types, currency and totals before accepting data. If required fields are missing, the system returns a review state rather than inventing values.",
+    "assumptions": [
+      "The use case has an identified owner and approved purpose.",
+      "The system has defined access boundaries and representative test data.",
+      "Consequential actions are subject to policy and human oversight where required."
+    ],
+    "walkthrough": [
+      "Clarify the user outcome and define measurable success.",
+      "Map inputs, data sources, trust boundaries and system dependencies.",
+      "Select the simplest architecture that meets requirements.",
+      "Define interfaces, state transitions, validation and failure handling.",
+      "Implement a bounded proof of concept with synthetic or approved data.",
+      "Evaluate normal, edge, adversarial and degraded scenarios.",
+      "Document the decision, limitations, owner and release conditions."
+    ],
+    "expected_result": "A documented architecture with explicit assumptions, testable acceptance criteria, controlled failure behaviour and a clear operational owner."
+  },
+  "implementation_lab": {
+    "objective": "Create a prompt specification for structured extraction. Include a task statement, trusted constraints, untrusted document boundary, output JSON schema description and uncertainty instruction. Write three adversarial test inputs: missing field, conflicting values and embedded instruction injection.",
+    "steps": [
+      "Write down the requirements and assumptions before coding.",
+      "Implement the smallest deterministic representation of the control or design.",
+      "Add at least three positive and three negative tests.",
+      "Record the expected output and compare actual behaviour.",
+      "Write a short architecture note explaining what the prototype does not prove."
+    ],
+    "code_language": "python",
+    "code": "import json\n\nREQUIRED = {'supplier', 'invoice_date', 'currency', 'total'}\n\ndef validate_extraction(raw):\n    data = json.loads(raw)\n    missing = REQUIRED - data.keys()\n    if missing:\n        return {'status': 'REVIEW', 'missing': sorted(missing)}\n    if not isinstance(data['total'], (int, float)):\n        return {'status': 'REVIEW', 'reason': 'total must be numeric'}\n    return {'status': 'ACCEPT', 'data': data}\n",
+    "verification": [
+      "Use prompt templates for repeatability, but validate output independently. Test prompt changes against a fixed dataset. Keep the prompt compact and place critical invariants in code and authorization layers.",
+      "Run the exercise in a clean Python environment and retain the test evidence.",
+      "Identify which production concerns are outside the scope of this small lab."
+    ]
+  },
+  "tradeoffs": [
+    {
+      "dimension": "Complexity versus capability",
+      "option_a": "Use the simplest deterministic component",
+      "option_b": "Introduce model-driven or distributed orchestration",
+      "consideration": "Verbose prompt versus modular prompt: modular prompts improve reuse but can create hidden interactions. Few-shot examples improve format adherence but may bias outputs. Strict structured output improves parsing but does not prove factual correctness. Delimiters clarify trust boundaries but cannot stop all injection attacks."
+    },
+    {
+      "dimension": "Automation versus oversight",
+      "option_a": "Automate the complete path",
+      "option_b": "Require human review at consequential boundaries",
+      "consideration": "Automation reduces handling effort; oversight provides accountability and recovery. Choose based on impact, reversibility and evidence of reliability."
+    },
+    {
+      "dimension": "Speed versus assurance",
+      "option_a": "Release quickly with limited checks",
+      "option_b": "Use staged rollout and layered evaluation",
+      "consideration": "A faster release is not beneficial if it increases downstream failure cost or makes recovery difficult."
+    }
+  ],
+  "failure_modes": [
+    {
+      "failure": "Ambiguous requirements",
+      "symptoms": "Stakeholders disagree about success or the system solves the wrong problem",
+      "cause": "Assumptions were not validated",
+      "mitigation": "Use measurable outcomes, examples and sign-off",
+      "recovery": "Pause scope expansion and re-baseline requirements."
+    },
+    {
+      "failure": "Boundary or permission failure",
+      "symptoms": "Data or actions are available to an unintended user or component",
+      "cause": "Authorization was assumed rather than enforced",
+      "mitigation": "Enforce least privilege at the service boundary",
+      "recovery": "Revoke access, investigate logs and remediate exposure."
+    },
+    {
+      "failure": "Unvalidated output or state",
+      "symptoms": "Malformed, inconsistent or unsupported result reaches downstream system",
+      "cause": "Trust was placed in model output without independent checks",
+      "mitigation": "Use schemas, semantic validation and source checks",
+      "recovery": "Quarantine result and route for review."
+    },
+    {
+      "failure": "Dependency or service outage",
+      "symptoms": "Requests time out or tasks remain incomplete",
+      "cause": "No bounded retry, fallback or recovery path",
+      "mitigation": "Use timeouts, circuit breakers, durable state and runbooks",
+      "recovery": "Enter degraded mode and reconcile pending work."
+    },
+    {
+      "failure": "Unobserved quality drift",
+      "symptoms": "Users report declining quality despite healthy uptime",
+      "cause": "Only infrastructure metrics were monitored",
+      "mitigation": "Track task-level quality and review samples",
+      "recovery": "Roll back or adjust the affected component and rerun evaluation."
+    }
+  ],
+  "security_governance": [
+    "Never embed secrets in prompts. Minimise personal data. Treat user and retrieved content as untrusted. Enforce authorization and output validation in application code. Keep an auditable record of prompt version and relevant source IDs.",
+    "Use least privilege and enforce access decisions outside the model.",
+    "Treat external content and tool results as untrusted data.",
+    "Minimise data collection and retention; keep secrets out of prompts and logs.",
+    "Record decisions and approvals with enough metadata for audit and incident review."
+  ],
+  "evaluation": {
+    "metrics": [
+      "Task completion and critical error rate",
+      "Latency percentiles and resource consumption",
+      "Validation and policy-denial rates",
+      "Human override or escalation rate",
+      "Cost per successfully completed task"
+    ],
+    "test_design": [
+      "Representative normal cases",
+      "Boundary and malformed-input cases",
+      "Adversarial or malicious-input cases",
+      "Timeout, unavailable dependency and partial-failure cases",
+      "Regression tests for every behaviour-affecting change"
+    ],
+    "acceptance_criteria": [
+      "No critical authorization or safety test fails.",
+      "Required output or interface contracts are validated.",
+      "Failure behaviour is observable and recoverable.",
+      "Performance meets the agreed operating envelope.",
+      "Known limitations and residual risks are documented."
+    ]
+  },
+  "production_checklist": [
+    "Prompts are versioned and reviewed.",
+    "Trusted instructions are distinct from untrusted input.",
+    "Output contracts are explicit and validated in code.",
+    "Security does not depend on prompt wording alone.",
+    "Prompt changes run against regression cases.",
+    "Secrets and unnecessary personal data are excluded."
+  ],
+  "case_study": {
+    "scenario": "An assistant reads legal contracts and extracts renewal dates. Some contracts contain conflicting clauses and embedded text telling the model to ignore its task. Design the prompt and surrounding validation architecture.",
+    "constraints": [
+      "Limited engineering time and operating budget",
+      "A need for accountable ownership and explainable decisions",
+      "Potential external dependencies and changing inputs",
+      "A requirement to preserve user trust and recover from failure"
+    ],
+    "task": "Write a prompt spec, JSON output contract, adversarial test set and versioning policy.",
+    "rubric": [
+      "25% problem framing and requirements traceability",
+      "20% architecture and interface quality",
+      "20% security, privacy and failure handling",
+      "20% evaluation and operational readiness",
+      "15% clarity of trade-off defence"
+    ],
+    "exemplar_reasoning": "Use a stable extraction contract, label contract text as evidence, extract clause references and competing dates, return ambiguity for review, validate dates and source passages in code, and prohibit external actions from the extraction prompt."
+  },
+  "knowledge_check": [
+    {
+      "id": "D2-L02-Q1",
+      "type": "comprehension",
+      "difficulty": "Core",
+      "question": "What is the central architectural principle behind prompt architecture and instruction hierarchy?",
+      "answer": "A production prompt is a versioned interface between application policy, task intent, untrusted inputs and model behaviour. Good prompt architecture is explicit, testable and supported by code-level controls.",
+      "explanation": "A strong answer links the concept to requirements, system boundaries and measurable behaviour."
+    },
+    {
+      "id": "D2-L02-Q2",
+      "type": "scenario",
+      "difficulty": "Advanced",
+      "question": "A prototype succeeds on a happy-path demonstration. Is that sufficient for production approval? Explain the additional evidence required.",
+      "answer": "No. Require representative evaluation, negative and adversarial tests, authorization checks, failure recovery, operational metrics, ownership and documented limitations.",
+      "explanation": "A demo demonstrates possibility, not reliability, safety or operational readiness."
+    },
+    {
+      "id": "D2-L02-Q3",
+      "type": "architect_judgement",
+      "difficulty": "Advanced",
+      "question": "How should an architect justify choosing a more complex design over a simpler alternative?",
+      "answer": "Show that the simpler alternative fails a material requirement and that the added capability's benefits exceed its cost, risk and operational burden.",
+      "explanation": "Complexity needs evidence-based justification."
+    },
+    {
+      "id": "D2-L02-Q4",
+      "type": "failure_analysis",
+      "difficulty": "Advanced",
+      "question": "Name two failure modes that should be tested before release and describe a mitigation.",
+      "answer": "Instruction collision: define precedence and test it. Prompt drift: version prompts and regression-test. Output schema violation: validate and retry within a strict budget. Over-constrained prompt: monitor omissions and false refusals. Prompt injection: isolate content, restrict tools and validate actions outside the model.",
+      "explanation": "Failure analysis should connect symptoms to causes, controls and recovery."
+    }
+  ],
+  "architect_challenge": {
+    "task": "Write a prompt spec, JSON output contract, adversarial test set and versioning policy.",
+    "rubric": [
+      "Requirements and constraints are explicit",
+      "Architecture choices are justified against alternatives",
+      "Trust and permission boundaries are enforced",
+      "Failure handling and evaluation are measurable",
+      "Operational ownership and rollback are documented"
+    ]
+  },
+  "further_reading": [
+    {
+      "title": "https://docs.anthropic.com/",
+      "url": "https://docs.anthropic.com/",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    },
+    {
+      "title": "https://www.anthropic.com/engineering",
+      "url": "https://www.anthropic.com/engineering",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    }
+  ],
+  "key_takeaways": [
+    "A production prompt is a versioned interface between application policy, task intent, untrusted inputs and model behaviour. Good prompt architecture is explicit, testable and supported by code-level controls.",
+    "Verbose prompt versus modular prompt: modular prompts improve reuse but can create hidden interactions. Few-shot examples improve format adherence but may bias outputs. Strict structured output improves parsing but does not prove factual correctness. Delimiters clarify trust boundaries but cannot stop all injection attacks.",
+    "Validate behaviour independently and measure outcomes.",
+    "Treat security, operations and governance as part of the architecture from the start."
+  ],
+  "tags": [
+    "d2",
+    "professional-architecture",
+    "implementation-lab",
+    "production-readiness"
+  ]
+}

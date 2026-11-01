@@ -1,0 +1,265 @@
+{
+  "schema_version": "2.0",
+  "id": "D6-L03",
+  "domain": "D6",
+  "title": "Technical Communication for Architecture Reviews",
+  "difficulty": "Professional",
+  "estimated_minutes": 95,
+  "as_of": "2026-11-01",
+  "learning_outcomes": [
+    "Explain the core principles and boundaries of technical communication for architecture reviews.",
+    "Select and justify an appropriate architecture pattern for a realistic system.",
+    "Identify failure modes, security risks and operational constraints.",
+    "Implement or evaluate a representative design using a repeatable lab.",
+    "Defend the design using measurable acceptance criteria and explicit trade-offs."
+  ],
+  "prerequisites": [
+    "Basic software engineering and system design",
+    "Foundational understanding of LLM applications",
+    "Familiarity with Python and JSON is helpful"
+  ],
+  "executive_orientation": "An architect must make system behaviour, trade-offs, uncertainty and accountability understandable to audiences with different decision needs. Clear communication reduces delivery risk and prevents technical assumptions from becoming business surprises.",
+  "first_principles": "Different audiences need different views: executives need outcomes, risk and investment; developers need interfaces and failure behaviour; security teams need data flows and trust boundaries; operators need runbooks and service indicators; users need limitations and recourse. One diagram or document rarely serves all audiences.",
+  "technical_deep_dive": "Prepare an architecture narrative: problem, constraints, options, recommendation, risks, operating model and decision requested. Use layered diagrams and define terms. State what the system does not do. Distinguish measured evidence from estimates and assumptions. For review meetings, surface unresolved decisions and assign owners.",
+  "architecture_pattern": {
+    "when_to_use": [
+      "The task has multiple components or competing requirements.",
+      "Quality, security, latency or cost must be measured and defended.",
+      "The system will be operated and changed after initial release."
+    ],
+    "when_not_to_use": [
+      "A simpler deterministic process already meets the requirement.",
+      "The proposed design adds complexity without a measurable benefit."
+    ],
+    "alternatives": [
+      "A deterministic workflow or rules engine",
+      "A bounded model-assisted component with human review",
+      "A managed integration with narrower permissions"
+    ],
+    "decision_criteria": [
+      "Task variability and consequence of error",
+      "Data sensitivity and permission boundaries",
+      "Latency, reliability and cost envelope",
+      "Operational ownership and maintainability",
+      "Ability to test and reverse the decision"
+    ]
+  },
+  "diagram_mermaid": "flowchart TD\n A[Architecture facts and evidence] --> B[Audience analysis]\n B --> C[Executive outcome and risk view]\n B --> D[Technical component and sequence view]\n B --> E[Security trust-boundary view]\n B --> F[Operations and runbook view]\n C --> G[Decision and accountable owner]\n D --> G\n E --> G\n F --> G",
+  "worked_example": {
+    "scenario": "A steering committee must approve a document assistant. Executives need expected benefits and residual risk; security needs data-flow and retention detail; operations needs support ownership and recovery. Prepare tailored views that remain consistent with one underlying architecture.",
+    "assumptions": [
+      "The use case has an identified owner and approved purpose.",
+      "The system has defined access boundaries and representative test data.",
+      "Consequential actions are subject to policy and human oversight where required."
+    ],
+    "walkthrough": [
+      "Clarify the user outcome and define measurable success.",
+      "Map inputs, data sources, trust boundaries and system dependencies.",
+      "Select the simplest architecture that meets requirements.",
+      "Define interfaces, state transitions, validation and failure handling.",
+      "Implement a bounded proof of concept with synthetic or approved data.",
+      "Evaluate normal, edge, adversarial and degraded scenarios.",
+      "Document the decision, limitations, owner and release conditions."
+    ],
+    "expected_result": "A documented architecture with explicit assumptions, testable acceptance criteria, controlled failure behaviour and a clear operational owner."
+  },
+  "implementation_lab": {
+    "objective": "Create a 5-minute executive brief and a technical review checklist for the same architecture. Ensure both explain limitations, failure handling and the decision being requested.",
+    "steps": [
+      "Write down the requirements and assumptions before coding.",
+      "Implement the smallest deterministic representation of the control or design.",
+      "Add at least three positive and three negative tests.",
+      "Record the expected output and compare actual behaviour.",
+      "Write a short architecture note explaining what the prototype does not prove."
+    ],
+    "code_language": "python",
+    "code": "architecture_message = {\n 'problem': 'Policy answers are slow and inconsistent',\n 'recommendation': 'Bounded retrieval assistant',\n 'benefit': 'Faster traceable answers',\n 'risk': 'Stale or incomplete source documents',\n 'control': 'Versioned corpus and human escalation',\n 'decision_needed': 'Approve controlled pilot'\n}\nprint(architecture_message)\n",
+    "verification": [
+      "Ask a reviewer unfamiliar with the project to explain the design back to you. Note ambiguous terms. Ensure diagrams show boundaries, data movement and failure paths, not only boxes.",
+      "Run the exercise in a clean Python environment and retain the test evidence.",
+      "Identify which production concerns are outside the scope of this small lab."
+    ]
+  },
+  "tradeoffs": [
+    {
+      "dimension": "Complexity versus capability",
+      "option_a": "Use the simplest deterministic component",
+      "option_b": "Introduce model-driven or distributed orchestration",
+      "consideration": "Single comprehensive document versus audience-specific views: comprehensive supports detail but overwhelms; tailored views improve decisions but must remain consistent. Technical certainty versus honest uncertainty: disclose assumptions and evidence confidence."
+    },
+    {
+      "dimension": "Automation versus oversight",
+      "option_a": "Automate the complete path",
+      "option_b": "Require human review at consequential boundaries",
+      "consideration": "Automation reduces handling effort; oversight provides accountability and recovery. Choose based on impact, reversibility and evidence of reliability."
+    },
+    {
+      "dimension": "Speed versus assurance",
+      "option_a": "Release quickly with limited checks",
+      "option_b": "Use staged rollout and layered evaluation",
+      "consideration": "A faster release is not beneficial if it increases downstream failure cost or makes recovery difficult."
+    }
+  ],
+  "failure_modes": [
+    {
+      "failure": "Ambiguous requirements",
+      "symptoms": "Stakeholders disagree about success or the system solves the wrong problem",
+      "cause": "Assumptions were not validated",
+      "mitigation": "Use measurable outcomes, examples and sign-off",
+      "recovery": "Pause scope expansion and re-baseline requirements."
+    },
+    {
+      "failure": "Boundary or permission failure",
+      "symptoms": "Data or actions are available to an unintended user or component",
+      "cause": "Authorization was assumed rather than enforced",
+      "mitigation": "Enforce least privilege at the service boundary",
+      "recovery": "Revoke access, investigate logs and remediate exposure."
+    },
+    {
+      "failure": "Unvalidated output or state",
+      "symptoms": "Malformed, inconsistent or unsupported result reaches downstream system",
+      "cause": "Trust was placed in model output without independent checks",
+      "mitigation": "Use schemas, semantic validation and source checks",
+      "recovery": "Quarantine result and route for review."
+    },
+    {
+      "failure": "Dependency or service outage",
+      "symptoms": "Requests time out or tasks remain incomplete",
+      "cause": "No bounded retry, fallback or recovery path",
+      "mitigation": "Use timeouts, circuit breakers, durable state and runbooks",
+      "recovery": "Enter degraded mode and reconcile pending work."
+    },
+    {
+      "failure": "Unobserved quality drift",
+      "symptoms": "Users report declining quality despite healthy uptime",
+      "cause": "Only infrastructure metrics were monitored",
+      "mitigation": "Track task-level quality and review samples",
+      "recovery": "Roll back or adjust the affected component and rerun evaluation."
+    }
+  ],
+  "security_governance": [
+    "Communicate privacy, safety and human accountability in plain language. Do not conceal limitations or known failure modes. Ensure affected users understand how to challenge or correct outcomes.",
+    "Use least privilege and enforce access decisions outside the model.",
+    "Treat external content and tool results as untrusted data.",
+    "Minimise data collection and retention; keep secrets out of prompts and logs.",
+    "Record decisions and approvals with enough metadata for audit and incident review."
+  ],
+  "evaluation": {
+    "metrics": [
+      "Task completion and critical error rate",
+      "Latency percentiles and resource consumption",
+      "Validation and policy-denial rates",
+      "Human override or escalation rate",
+      "Cost per successfully completed task"
+    ],
+    "test_design": [
+      "Representative normal cases",
+      "Boundary and malformed-input cases",
+      "Adversarial or malicious-input cases",
+      "Timeout, unavailable dependency and partial-failure cases",
+      "Regression tests for every behaviour-affecting change"
+    ],
+    "acceptance_criteria": [
+      "No critical authorization or safety test fails.",
+      "Required output or interface contracts are validated.",
+      "Failure behaviour is observable and recoverable.",
+      "Performance meets the agreed operating envelope.",
+      "Known limitations and residual risks are documented."
+    ]
+  },
+  "production_checklist": [
+    "Audience and decision need are identified.",
+    "Recommendation is linked to measurable outcomes.",
+    "Assumptions, risks and limitations are explicit.",
+    "Diagrams are appropriate to audience.",
+    "Decision request and accountable owner are clear."
+  ],
+  "case_study": {
+    "scenario": "Your board asks whether the proposed AI system is safe enough to deploy. Prepare a concise response that avoids both technical jargon and unsupported assurance.",
+    "constraints": [
+      "Limited engineering time and operating budget",
+      "A need for accountable ownership and explainable decisions",
+      "Potential external dependencies and changing inputs",
+      "A requirement to preserve user trust and recover from failure"
+    ],
+    "task": "Submit an executive brief, technical architecture review pack and stakeholder Q&A.",
+    "rubric": [
+      "25% problem framing and requirements traceability",
+      "20% architecture and interface quality",
+      "20% security, privacy and failure handling",
+      "20% evaluation and operational readiness",
+      "15% clarity of trade-off defence"
+    ],
+    "exemplar_reasoning": "Explain intended use, prohibited use, data boundaries, evaluation evidence, residual risks, human controls, incident response and staged deployment conditions. Recommend a limited pilot if evidence is incomplete rather than claiming absolute safety."
+  },
+  "knowledge_check": [
+    {
+      "id": "D6-L03-Q1",
+      "type": "comprehension",
+      "difficulty": "Core",
+      "question": "What is the central architectural principle behind technical communication for architecture reviews?",
+      "answer": "An architect must make system behaviour, trade-offs, uncertainty and accountability understandable to audiences with different decision needs. Clear communication reduces delivery risk and prevents technical assumptions from becoming business surprises.",
+      "explanation": "A strong answer links the concept to requirements, system boundaries and measurable behaviour."
+    },
+    {
+      "id": "D6-L03-Q2",
+      "type": "scenario",
+      "difficulty": "Advanced",
+      "question": "A prototype succeeds on a happy-path demonstration. Is that sufficient for production approval? Explain the additional evidence required.",
+      "answer": "No. Require representative evaluation, negative and adversarial tests, authorization checks, failure recovery, operational metrics, ownership and documented limitations.",
+      "explanation": "A demo demonstrates possibility, not reliability, safety or operational readiness."
+    },
+    {
+      "id": "D6-L03-Q3",
+      "type": "architect_judgement",
+      "difficulty": "Advanced",
+      "question": "How should an architect justify choosing a more complex design over a simpler alternative?",
+      "answer": "Show that the simpler alternative fails a material requirement and that the added capability's benefits exceed its cost, risk and operational burden.",
+      "explanation": "Complexity needs evidence-based justification."
+    },
+    {
+      "id": "D6-L03-Q4",
+      "type": "failure_analysis",
+      "difficulty": "Advanced",
+      "question": "Name two failure modes that should be tested before release and describe a mitigation.",
+      "answer": "Jargon overload: define terms. Overclaiming: separate evidence from aspiration. Missing decision request: state what approval is needed. Inconsistent diagrams: use a single source of truth.",
+      "explanation": "Failure analysis should connect symptoms to causes, controls and recovery."
+    }
+  ],
+  "architect_challenge": {
+    "task": "Submit an executive brief, technical architecture review pack and stakeholder Q&A.",
+    "rubric": [
+      "Requirements and constraints are explicit",
+      "Architecture choices are justified against alternatives",
+      "Trust and permission boundaries are enforced",
+      "Failure handling and evaluation are measurable",
+      "Operational ownership and rollback are documented"
+    ]
+  },
+  "further_reading": [
+    {
+      "title": "https://www.anthropic.com/engineering",
+      "url": "https://www.anthropic.com/engineering",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    },
+    {
+      "title": "https://docs.anthropic.com/",
+      "url": "https://docs.anthropic.com/",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    }
+  ],
+  "key_takeaways": [
+    "An architect must make system behaviour, trade-offs, uncertainty and accountability understandable to audiences with different decision needs. Clear communication reduces delivery risk and prevents technical assumptions from becoming business surprises.",
+    "Single comprehensive document versus audience-specific views: comprehensive supports detail but overwhelms; tailored views improve decisions but must remain consistent. Technical certainty versus honest uncertainty: disclose assumptions and evidence confidence.",
+    "Validate behaviour independently and measure outcomes.",
+    "Treat security, operations and governance as part of the architecture from the start."
+  ],
+  "tags": [
+    "d6",
+    "professional-architecture",
+    "implementation-lab",
+    "production-readiness"
+  ]
+}

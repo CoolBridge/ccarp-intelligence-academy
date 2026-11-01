@@ -1,0 +1,30 @@
+CCAR-P INTELLIGENCE ACADEMY — FULL EDITION 2.1
+
+LOCAL LAUNCH (macOS)
+1. Extract the ZIP.
+2. Open the CCARP_Intelligence_Academy_Full folder in VS Code.
+3. Open Terminal > New Terminal.
+4. Run:
+   python3 -m venv .venv
+   source .venv/bin/activate
+   python -m pip install -r requirements.txt
+   python -m streamlit run app.py
+5. Visit http://localhost:8501
+
+WHAT IS INCLUDED
+- 29 professional lessons across 7 domains
+- 116 original knowledge checks
+- Diagrams, detailed explanations, worked examples and Python labs
+- Architecture trade-offs, failure analysis, security, evaluation and production checklists
+- Learning Path, Assessment Centre, progress tracking, tutor, voice reader and backup/restore
+- Optional Supabase cloud sync for cross-device progress
+- No paid OpenAI or Anthropic API required
+
+DEPLOYMENT
+Read deployment/STREAMLIT_CLOUD_DEPLOYMENT.md.
+For cross-device progress, configure Supabase and Streamlit secrets.
+Without cloud sync, hosted SQLite data is not durable.
+
+IMPORTANT
+This is an independent learning aid, not an official Anthropic exam platform.
+The guided tutor is local curriculum retrieval, not a live AI model.

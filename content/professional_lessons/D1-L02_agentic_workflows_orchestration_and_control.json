@@ -1,0 +1,267 @@
+{
+  "schema_version": "2.0",
+  "id": "D1-L02",
+  "domain": "D1",
+  "title": "Agentic Workflows, Orchestration and Control",
+  "difficulty": "Professional",
+  "estimated_minutes": 95,
+  "as_of": "2026-11-01",
+  "learning_outcomes": [
+    "Explain the core principles and boundaries of agentic workflows, orchestration and control.",
+    "Select and justify an appropriate architecture pattern for a realistic system.",
+    "Identify failure modes, security risks and operational constraints.",
+    "Implement or evaluate a representative design using a repeatable lab.",
+    "Defend the design using measurable acceptance criteria and explicit trade-offs."
+  ],
+  "prerequisites": [
+    "Basic software engineering and system design",
+    "Foundational understanding of LLM applications",
+    "Familiarity with Python and JSON is helpful"
+  ],
+  "executive_orientation": "An agentic system delegates bounded decisions to a model while software retains control over permissions, state, execution and stopping conditions. Agentic autonomy is a design choice, not a default upgrade.",
+  "first_principles": "Distinguish a fixed workflow from an agent loop. A workflow follows predetermined transitions; an agent chooses among permitted next actions based on context and tool results. Autonomy is useful when the path cannot be fully specified in advance, but it increases uncertainty, latency, cost and attack surface. The architecture must constrain action space and define when the system stops or escalates.",
+  "technical_deep_dive": "Model the agent as a state machine with explicit states, allowed transitions, tool contracts, maximum iterations, deadlines, budgets and terminal conditions. Keep durable state outside the model. The orchestrator validates tool requests, checks authorization, executes tools, normalises results and records events. Use bounded loops, retry budgets, idempotency keys and compensation for partial completion. For multi-agent designs, define ownership and message contracts; do not add agents without a measurable reason.",
+  "architecture_pattern": {
+    "when_to_use": [
+      "The task has multiple components or competing requirements.",
+      "Quality, security, latency or cost must be measured and defended.",
+      "The system will be operated and changed after initial release."
+    ],
+    "when_not_to_use": [
+      "A simpler deterministic process already meets the requirement.",
+      "The proposed design adds complexity without a measurable benefit."
+    ],
+    "alternatives": [
+      "A deterministic workflow or rules engine",
+      "A bounded model-assisted component with human review",
+      "A managed integration with narrower permissions"
+    ],
+    "decision_criteria": [
+      "Task variability and consequence of error",
+      "Data sensitivity and permission boundaries",
+      "Latency, reliability and cost envelope",
+      "Operational ownership and maintainability",
+      "Ability to test and reverse the decision"
+    ]
+  },
+  "diagram_mermaid": "flowchart TD\n A[Task and policy] --> B[Orchestrator]\n B --> C[Model proposes next step]\n C --> D{Allowed tool and authorized?}\n D -->|No| E[Reject or request approval]\n D -->|Yes| F[Execute tool]\n F --> G[Validate result and update state]\n G --> H{Goal met or budget exhausted?}\n H -->|No| B\n H -->|Yes| I[Final response and audit]",
+  "worked_example": {
+    "scenario": "An operations agent investigates a failed deployment. It can read logs, inspect deployment status and draft a rollback plan, but cannot execute rollback without approval. The orchestrator permits read-only tools automatically, asks a human to approve high-impact actions, and stops after a fixed number of investigation steps or a deadline.",
+    "assumptions": [
+      "The use case has an identified owner and approved purpose.",
+      "The system has defined access boundaries and representative test data.",
+      "Consequential actions are subject to policy and human oversight where required."
+    ],
+    "walkthrough": [
+      "Clarify the user outcome and define measurable success.",
+      "Map inputs, data sources, trust boundaries and system dependencies.",
+      "Select the simplest architecture that meets requirements.",
+      "Define interfaces, state transitions, validation and failure handling.",
+      "Implement a bounded proof of concept with synthetic or approved data.",
+      "Evaluate normal, edge, adversarial and degraded scenarios.",
+      "Document the decision, limitations, owner and release conditions."
+    ],
+    "expected_result": "A documented architecture with explicit assumptions, testable acceptance criteria, controlled failure behaviour and a clear operational owner."
+  },
+  "implementation_lab": {
+    "objective": "Implement a simple deterministic agent-loop simulator. Use a list of proposed actions, an allowlist, a maximum step count and an approval gate. Demonstrate that a disallowed action is rejected and that the loop stops when its budget is exhausted.",
+    "steps": [
+      "Write down the requirements and assumptions before coding.",
+      "Implement the smallest deterministic representation of the control or design.",
+      "Add at least three positive and three negative tests.",
+      "Record the expected output and compare actual behaviour.",
+      "Write a short architecture note explaining what the prototype does not prove."
+    ],
+    "code_language": "python",
+    "code": "ALLOWED = {'read_logs', 'get_status', 'draft_plan'}\nMAX_STEPS = 5\n\ndef run_loop(proposals):\n    audit = []\n    for step, action in enumerate(proposals[:MAX_STEPS], start=1):\n        if action not in ALLOWED:\n            audit.append({'step': step, 'action': action, 'result': 'REJECTED'})\n            break\n        audit.append({'step': step, 'action': action, 'result': 'SIMULATED'})\n        if action == 'draft_plan':\n            break\n    return audit\n\nprint(run_loop(['read_logs', 'get_status', 'delete_cluster']))\n",
+    "verification": [
+      "Add a wall-clock deadline, retry budget, approval-required action class and an idempotency key. Verify each guard with a test. Explain what state must survive a process restart.",
+      "Run the exercise in a clean Python environment and retain the test evidence.",
+      "Identify which production concerns are outside the scope of this small lab."
+    ]
+  },
+  "tradeoffs": [
+    {
+      "dimension": "Complexity versus capability",
+      "option_a": "Use the simplest deterministic component",
+      "option_b": "Introduce model-driven or distributed orchestration",
+      "consideration": "Single-agent loop versus deterministic workflow: use a workflow for stable paths and an agent for ambiguous planning. Multi-agent versus single-agent: parallelism may improve decomposition but adds coordination overhead, duplicated context and failure propagation. Human approval versus full automation: approval adds latency but controls consequence."
+    },
+    {
+      "dimension": "Automation versus oversight",
+      "option_a": "Automate the complete path",
+      "option_b": "Require human review at consequential boundaries",
+      "consideration": "Automation reduces handling effort; oversight provides accountability and recovery. Choose based on impact, reversibility and evidence of reliability."
+    },
+    {
+      "dimension": "Speed versus assurance",
+      "option_a": "Release quickly with limited checks",
+      "option_b": "Use staged rollout and layered evaluation",
+      "consideration": "A faster release is not beneficial if it increases downstream failure cost or makes recovery difficult."
+    }
+  ],
+  "failure_modes": [
+    {
+      "failure": "Ambiguous requirements",
+      "symptoms": "Stakeholders disagree about success or the system solves the wrong problem",
+      "cause": "Assumptions were not validated",
+      "mitigation": "Use measurable outcomes, examples and sign-off",
+      "recovery": "Pause scope expansion and re-baseline requirements."
+    },
+    {
+      "failure": "Boundary or permission failure",
+      "symptoms": "Data or actions are available to an unintended user or component",
+      "cause": "Authorization was assumed rather than enforced",
+      "mitigation": "Enforce least privilege at the service boundary",
+      "recovery": "Revoke access, investigate logs and remediate exposure."
+    },
+    {
+      "failure": "Unvalidated output or state",
+      "symptoms": "Malformed, inconsistent or unsupported result reaches downstream system",
+      "cause": "Trust was placed in model output without independent checks",
+      "mitigation": "Use schemas, semantic validation and source checks",
+      "recovery": "Quarantine result and route for review."
+    },
+    {
+      "failure": "Dependency or service outage",
+      "symptoms": "Requests time out or tasks remain incomplete",
+      "cause": "No bounded retry, fallback or recovery path",
+      "mitigation": "Use timeouts, circuit breakers, durable state and runbooks",
+      "recovery": "Enter degraded mode and reconcile pending work."
+    },
+    {
+      "failure": "Unobserved quality drift",
+      "symptoms": "Users report declining quality despite healthy uptime",
+      "cause": "Only infrastructure metrics were monitored",
+      "mitigation": "Track task-level quality and review samples",
+      "recovery": "Roll back or adjust the affected component and rerun evaluation."
+    }
+  ],
+  "security_governance": [
+    "Treat every tool as a capability with least privilege. Separate read and write tools. Require approval for irreversible or high-impact actions. Treat tool outputs as untrusted. Maintain an event log of proposed action, authorization decision, execution result and actor.",
+    "Use least privilege and enforce access decisions outside the model.",
+    "Treat external content and tool results as untrusted data.",
+    "Minimise data collection and retention; keep secrets out of prompts and logs.",
+    "Record decisions and approvals with enough metadata for audit and incident review."
+  ],
+  "evaluation": {
+    "metrics": [
+      "Task completion and critical error rate",
+      "Latency percentiles and resource consumption",
+      "Validation and policy-denial rates",
+      "Human override or escalation rate",
+      "Cost per successfully completed task"
+    ],
+    "test_design": [
+      "Representative normal cases",
+      "Boundary and malformed-input cases",
+      "Adversarial or malicious-input cases",
+      "Timeout, unavailable dependency and partial-failure cases",
+      "Regression tests for every behaviour-affecting change"
+    ],
+    "acceptance_criteria": [
+      "No critical authorization or safety test fails.",
+      "Required output or interface contracts are validated.",
+      "Failure behaviour is observable and recoverable.",
+      "Performance meets the agreed operating envelope.",
+      "Known limitations and residual risks are documented."
+    ]
+  },
+  "production_checklist": [
+    "Each agent has a bounded purpose and permitted action set.",
+    "The orchestrator—not the model—enforces authorization.",
+    "Maximum steps, deadlines and budgets are explicit.",
+    "Side effects are idempotent or recoverable.",
+    "Human approval is required for high-impact actions.",
+    "State and audit events survive process restarts.",
+    "A deterministic workflow alternative was evaluated."
+  ],
+  "case_study": {
+    "scenario": "A procurement agent can search suppliers, compare quotations, draft a recommendation and create a purchase order. Design the autonomy boundary and approval model. Consider malicious supplier content, duplicate submissions, unavailable ERP and a user changing requirements mid-task.",
+    "constraints": [
+      "Limited engineering time and operating budget",
+      "A need for accountable ownership and explainable decisions",
+      "Potential external dependencies and changing inputs",
+      "A requirement to preserve user trust and recover from failure"
+    ],
+    "task": "Provide a state-transition diagram, tool permission matrix, retry/timeout policy, human approval workflow and test matrix.",
+    "rubric": [
+      "25% problem framing and requirements traceability",
+      "20% architecture and interface quality",
+      "20% security, privacy and failure handling",
+      "20% evaluation and operational readiness",
+      "15% clarity of trade-off defence"
+    ],
+    "exemplar_reasoning": "Keep supplier search and comparison as read operations; treat supplier documents as untrusted; draft recommendations with evidence; require authorized approval before purchase order creation; use idempotency and status reconciliation for ERP writes; record requirement changes and restart affected evaluation."
+  },
+  "knowledge_check": [
+    {
+      "id": "D1-L02-Q1",
+      "type": "comprehension",
+      "difficulty": "Core",
+      "question": "What is the central architectural principle behind agentic workflows, orchestration and control?",
+      "answer": "An agentic system delegates bounded decisions to a model while software retains control over permissions, state, execution and stopping conditions. Agentic autonomy is a design choice, not a default upgrade.",
+      "explanation": "A strong answer links the concept to requirements, system boundaries and measurable behaviour."
+    },
+    {
+      "id": "D1-L02-Q2",
+      "type": "scenario",
+      "difficulty": "Advanced",
+      "question": "A prototype succeeds on a happy-path demonstration. Is that sufficient for production approval? Explain the additional evidence required.",
+      "answer": "No. Require representative evaluation, negative and adversarial tests, authorization checks, failure recovery, operational metrics, ownership and documented limitations.",
+      "explanation": "A demo demonstrates possibility, not reliability, safety or operational readiness."
+    },
+    {
+      "id": "D1-L02-Q3",
+      "type": "architect_judgement",
+      "difficulty": "Advanced",
+      "question": "How should an architect justify choosing a more complex design over a simpler alternative?",
+      "answer": "Show that the simpler alternative fails a material requirement and that the added capability's benefits exceed its cost, risk and operational burden.",
+      "explanation": "Complexity needs evidence-based justification."
+    },
+    {
+      "id": "D1-L02-Q4",
+      "type": "failure_analysis",
+      "difficulty": "Advanced",
+      "question": "Name two failure modes that should be tested before release and describe a mitigation.",
+      "answer": "Runaway loop: enforce iteration and time budgets. Tool misuse: validate schemas and permissions server-side. Duplicate side effects: use idempotency keys. Partial execution: use compensating actions or explicit recovery states. Agent disagreement: assign one orchestrator as authority and define conflict resolution.",
+      "explanation": "Failure analysis should connect symptoms to causes, controls and recovery."
+    }
+  ],
+  "architect_challenge": {
+    "task": "Provide a state-transition diagram, tool permission matrix, retry/timeout policy, human approval workflow and test matrix.",
+    "rubric": [
+      "Requirements and constraints are explicit",
+      "Architecture choices are justified against alternatives",
+      "Trust and permission boundaries are enforced",
+      "Failure handling and evaluation are measurable",
+      "Operational ownership and rollback are documented"
+    ]
+  },
+  "further_reading": [
+    {
+      "title": "https://docs.anthropic.com/",
+      "url": "https://docs.anthropic.com/",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    },
+    {
+      "title": "https://www.anthropic.com/engineering",
+      "url": "https://www.anthropic.com/engineering",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    }
+  ],
+  "key_takeaways": [
+    "An agentic system delegates bounded decisions to a model while software retains control over permissions, state, execution and stopping conditions. Agentic autonomy is a design choice, not a default upgrade.",
+    "Single-agent loop versus deterministic workflow: use a workflow for stable paths and an agent for ambiguous planning. Multi-agent versus single-agent: parallelism may improve decomposition but adds coordination overhead, duplicated context and failure propagation. Human approval versus full automation: approval adds latency but controls consequence.",
+    "Validate behaviour independently and measure outcomes.",
+    "Treat security, operations and governance as part of the architecture from the start."
+  ],
+  "tags": [
+    "d1",
+    "professional-architecture",
+    "implementation-lab",
+    "production-readiness"
+  ]
+}

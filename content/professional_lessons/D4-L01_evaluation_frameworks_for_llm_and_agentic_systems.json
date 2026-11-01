@@ -1,0 +1,266 @@
+{
+  "schema_version": "2.0",
+  "id": "D4-L01",
+  "domain": "D4",
+  "title": "Evaluation Frameworks for LLM and Agentic Systems",
+  "difficulty": "Professional",
+  "estimated_minutes": 95,
+  "as_of": "2026-11-01",
+  "learning_outcomes": [
+    "Explain the core principles and boundaries of evaluation frameworks for llm and agentic systems.",
+    "Select and justify an appropriate architecture pattern for a realistic system.",
+    "Identify failure modes, security risks and operational constraints.",
+    "Implement or evaluate a representative design using a repeatable lab.",
+    "Defend the design using measurable acceptance criteria and explicit trade-offs."
+  ],
+  "prerequisites": [
+    "Basic software engineering and system design",
+    "Foundational understanding of LLM applications",
+    "Familiarity with Python and JSON is helpful"
+  ],
+  "executive_orientation": "Evaluation is the evidence that a system meets its intended task and safety requirements. For probabilistic systems, a successful demo is not an evaluation strategy.",
+  "first_principles": "Define evaluation before implementation. A test item should represent a real task, expected behaviour, source evidence, risk level and scoring rubric. Separate objective checks such as schema validity from subjective checks such as answer usefulness. For agentic systems, evaluate the trajectory and tool actions as well as the final response.",
+  "technical_deep_dive": "Build a layered evaluation stack: unit tests for deterministic code; contract tests for interfaces; golden datasets for task behaviour; rubric-based human review for nuanced outputs; adversarial tests for safety; online monitoring for production drift. Use representative samples and stratify by language, user group, document quality and risk. Avoid relying on a single aggregate score. Track false acceptance and false rejection, critical error rates and confidence intervals where sample size permits.",
+  "architecture_pattern": {
+    "when_to_use": [
+      "The task has multiple components or competing requirements.",
+      "Quality, security, latency or cost must be measured and defended.",
+      "The system will be operated and changed after initial release."
+    ],
+    "when_not_to_use": [
+      "A simpler deterministic process already meets the requirement.",
+      "The proposed design adds complexity without a measurable benefit."
+    ],
+    "alternatives": [
+      "A deterministic workflow or rules engine",
+      "A bounded model-assisted component with human review",
+      "A managed integration with narrower permissions"
+    ],
+    "decision_criteria": [
+      "Task variability and consequence of error",
+      "Data sensitivity and permission boundaries",
+      "Latency, reliability and cost envelope",
+      "Operational ownership and maintainability",
+      "Ability to test and reverse the decision"
+    ]
+  },
+  "diagram_mermaid": "flowchart TD\n A[Task and risk definition] --> B[Evaluation dataset]\n B --> C[Deterministic tests]\n B --> D[Rubric and human review]\n B --> E[Adversarial tests]\n C --> F[Scorecard]\n D --> F\n E --> F\n F --> G[Release decision]\n G --> H[Production monitoring and drift]",
+  "worked_example": {
+    "scenario": "A contract assistant extracts clauses and summarises obligations. Build a labelled set of contracts with gold clause spans, required fields and known ambiguity. Score extraction precision/recall, date accuracy, evidence attribution and reviewer escalation. Include contracts with missing clauses, scanned pages and conflicting amendments.",
+    "assumptions": [
+      "The use case has an identified owner and approved purpose.",
+      "The system has defined access boundaries and representative test data.",
+      "Consequential actions are subject to policy and human oversight where required."
+    ],
+    "walkthrough": [
+      "Clarify the user outcome and define measurable success.",
+      "Map inputs, data sources, trust boundaries and system dependencies.",
+      "Select the simplest architecture that meets requirements.",
+      "Define interfaces, state transitions, validation and failure handling.",
+      "Implement a bounded proof of concept with synthetic or approved data.",
+      "Evaluate normal, edge, adversarial and degraded scenarios.",
+      "Document the decision, limitations, owner and release conditions."
+    ],
+    "expected_result": "A documented architecture with explicit assumptions, testable acceptance criteria, controlled failure behaviour and a clear operational owner."
+  },
+  "implementation_lab": {
+    "objective": "Create a 10-item evaluation plan. Define a test record schema, one exact-match metric, one semantic rubric and one safety test. Write a release gate requiring no critical unsupported claims and a minimum extraction score.",
+    "steps": [
+      "Write down the requirements and assumptions before coding.",
+      "Implement the smallest deterministic representation of the control or design.",
+      "Add at least three positive and three negative tests.",
+      "Record the expected output and compare actual behaviour.",
+      "Write a short architecture note explaining what the prototype does not prove."
+    ],
+    "code_language": "python",
+    "code": "TESTS = [\n {'id':'T1','expected':'renewal_date','risk':'high'},\n {'id':'T2','expected':'termination_clause','risk':'high'},\n]\n\ndef release_gate(results):\n    critical_failures = sum(r['critical_failure'] for r in results)\n    pass_rate = sum(r['passed'] for r in results) / max(len(results), 1)\n    return critical_failures == 0 and pass_rate >= 0.90\n",
+    "verification": [
+      "Keep train/dev/test sets separated when tuning prompts or retrieval. Blind a portion of the evaluation set. Record model, prompt, dataset and evaluator versions. Review examples behind metric movement rather than treating a score as self-explanatory.",
+      "Run the exercise in a clean Python environment and retain the test evidence.",
+      "Identify which production concerns are outside the scope of this small lab."
+    ]
+  },
+  "tradeoffs": [
+    {
+      "dimension": "Complexity versus capability",
+      "option_a": "Use the simplest deterministic component",
+      "option_b": "Introduce model-driven or distributed orchestration",
+      "consideration": "Automated exact-match versus human rubric: exact-match is reproducible but brittle for open text. Model-based grading scales but can share model biases and needs calibration. Offline evaluation versus online monitoring: offline is controlled; online detects real distribution shifts but requires privacy and operational controls."
+    },
+    {
+      "dimension": "Automation versus oversight",
+      "option_a": "Automate the complete path",
+      "option_b": "Require human review at consequential boundaries",
+      "consideration": "Automation reduces handling effort; oversight provides accountability and recovery. Choose based on impact, reversibility and evidence of reliability."
+    },
+    {
+      "dimension": "Speed versus assurance",
+      "option_a": "Release quickly with limited checks",
+      "option_b": "Use staged rollout and layered evaluation",
+      "consideration": "A faster release is not beneficial if it increases downstream failure cost or makes recovery difficult."
+    }
+  ],
+  "failure_modes": [
+    {
+      "failure": "Ambiguous requirements",
+      "symptoms": "Stakeholders disagree about success or the system solves the wrong problem",
+      "cause": "Assumptions were not validated",
+      "mitigation": "Use measurable outcomes, examples and sign-off",
+      "recovery": "Pause scope expansion and re-baseline requirements."
+    },
+    {
+      "failure": "Boundary or permission failure",
+      "symptoms": "Data or actions are available to an unintended user or component",
+      "cause": "Authorization was assumed rather than enforced",
+      "mitigation": "Enforce least privilege at the service boundary",
+      "recovery": "Revoke access, investigate logs and remediate exposure."
+    },
+    {
+      "failure": "Unvalidated output or state",
+      "symptoms": "Malformed, inconsistent or unsupported result reaches downstream system",
+      "cause": "Trust was placed in model output without independent checks",
+      "mitigation": "Use schemas, semantic validation and source checks",
+      "recovery": "Quarantine result and route for review."
+    },
+    {
+      "failure": "Dependency or service outage",
+      "symptoms": "Requests time out or tasks remain incomplete",
+      "cause": "No bounded retry, fallback or recovery path",
+      "mitigation": "Use timeouts, circuit breakers, durable state and runbooks",
+      "recovery": "Enter degraded mode and reconcile pending work."
+    },
+    {
+      "failure": "Unobserved quality drift",
+      "symptoms": "Users report declining quality despite healthy uptime",
+      "cause": "Only infrastructure metrics were monitored",
+      "mitigation": "Track task-level quality and review samples",
+      "recovery": "Roll back or adjust the affected component and rerun evaluation."
+    }
+  ],
+  "security_governance": [
+    "Do not place sensitive production data into evaluation sets without governance. De-identify or synthesise where appropriate. Ensure test prompts cannot trigger real side effects. Restrict access to evaluation datasets and preserve auditability.",
+    "Use least privilege and enforce access decisions outside the model.",
+    "Treat external content and tool results as untrusted data.",
+    "Minimise data collection and retention; keep secrets out of prompts and logs.",
+    "Record decisions and approvals with enough metadata for audit and incident review."
+  ],
+  "evaluation": {
+    "metrics": [
+      "Task completion and critical error rate",
+      "Latency percentiles and resource consumption",
+      "Validation and policy-denial rates",
+      "Human override or escalation rate",
+      "Cost per successfully completed task"
+    ],
+    "test_design": [
+      "Representative normal cases",
+      "Boundary and malformed-input cases",
+      "Adversarial or malicious-input cases",
+      "Timeout, unavailable dependency and partial-failure cases",
+      "Regression tests for every behaviour-affecting change"
+    ],
+    "acceptance_criteria": [
+      "No critical authorization or safety test fails.",
+      "Required output or interface contracts are validated.",
+      "Failure behaviour is observable and recoverable.",
+      "Performance meets the agreed operating envelope.",
+      "Known limitations and residual risks are documented."
+    ]
+  },
+  "production_checklist": [
+    "Evaluation criteria exist before launch.",
+    "Datasets represent real and edge-case tasks.",
+    "Objective and subjective metrics are separated.",
+    "High-risk failures have explicit release gates.",
+    "Model, prompt and dataset versions are recorded.",
+    "Online monitoring and rollback criteria exist."
+  ],
+  "case_study": {
+    "scenario": "A legal assistant's answer quality improves on an internal benchmark but users report more fabricated citations. Diagnose the evaluation gap and redesign the scorecard.",
+    "constraints": [
+      "Limited engineering time and operating budget",
+      "A need for accountable ownership and explainable decisions",
+      "Potential external dependencies and changing inputs",
+      "A requirement to preserve user trust and recover from failure"
+    ],
+    "task": "Submit an evaluation plan with dataset design, rubric, release gates, adversarial set and monitoring dashboard specification.",
+    "rubric": [
+      "25% problem framing and requirements traceability",
+      "20% architecture and interface quality",
+      "20% security, privacy and failure handling",
+      "20% evaluation and operational readiness",
+      "15% clarity of trade-off defence"
+    ],
+    "exemplar_reasoning": "Add citation entailment and source-span checks; stratify by document type; inspect unsupported claims; ensure benchmark represents live inputs; set a hard critical-error gate; require human review for high-risk conclusions."
+  },
+  "knowledge_check": [
+    {
+      "id": "D4-L01-Q1",
+      "type": "comprehension",
+      "difficulty": "Core",
+      "question": "What is the central architectural principle behind evaluation frameworks for llm and agentic systems?",
+      "answer": "Evaluation is the evidence that a system meets its intended task and safety requirements. For probabilistic systems, a successful demo is not an evaluation strategy.",
+      "explanation": "A strong answer links the concept to requirements, system boundaries and measurable behaviour."
+    },
+    {
+      "id": "D4-L01-Q2",
+      "type": "scenario",
+      "difficulty": "Advanced",
+      "question": "A prototype succeeds on a happy-path demonstration. Is that sufficient for production approval? Explain the additional evidence required.",
+      "answer": "No. Require representative evaluation, negative and adversarial tests, authorization checks, failure recovery, operational metrics, ownership and documented limitations.",
+      "explanation": "A demo demonstrates possibility, not reliability, safety or operational readiness."
+    },
+    {
+      "id": "D4-L01-Q3",
+      "type": "architect_judgement",
+      "difficulty": "Advanced",
+      "question": "How should an architect justify choosing a more complex design over a simpler alternative?",
+      "answer": "Show that the simpler alternative fails a material requirement and that the added capability's benefits exceed its cost, risk and operational burden.",
+      "explanation": "Complexity needs evidence-based justification."
+    },
+    {
+      "id": "D4-L01-Q4",
+      "type": "failure_analysis",
+      "difficulty": "Advanced",
+      "question": "Name two failure modes that should be tested before release and describe a mitigation.",
+      "answer": "Metric gaming: optimise a proxy while task quality declines. Dataset leakage: tune against test cases. Evaluator drift: calibrate reviewers. Aggregate masking: slice results by risk and cohort. Unmeasured tool trajectory: inspect action sequence and side effects, not only final answer.",
+      "explanation": "Failure analysis should connect symptoms to causes, controls and recovery."
+    }
+  ],
+  "architect_challenge": {
+    "task": "Submit an evaluation plan with dataset design, rubric, release gates, adversarial set and monitoring dashboard specification.",
+    "rubric": [
+      "Requirements and constraints are explicit",
+      "Architecture choices are justified against alternatives",
+      "Trust and permission boundaries are enforced",
+      "Failure handling and evaluation are measurable",
+      "Operational ownership and rollback are documented"
+    ]
+  },
+  "further_reading": [
+    {
+      "title": "https://www.anthropic.com/engineering",
+      "url": "https://www.anthropic.com/engineering",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    },
+    {
+      "title": "https://docs.anthropic.com/",
+      "url": "https://docs.anthropic.com/",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    }
+  ],
+  "key_takeaways": [
+    "Evaluation is the evidence that a system meets its intended task and safety requirements. For probabilistic systems, a successful demo is not an evaluation strategy.",
+    "Automated exact-match versus human rubric: exact-match is reproducible but brittle for open text. Model-based grading scales but can share model biases and needs calibration. Offline evaluation versus online monitoring: offline is controlled; online detects real distribution shifts but requires privacy and operational controls.",
+    "Validate behaviour independently and measure outcomes.",
+    "Treat security, operations and governance as part of the architecture from the start."
+  ],
+  "tags": [
+    "d4",
+    "professional-architecture",
+    "implementation-lab",
+    "production-readiness"
+  ]
+}

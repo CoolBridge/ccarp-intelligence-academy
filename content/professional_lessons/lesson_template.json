@@ -1,0 +1,103 @@
+{
+  "schema_version": "2.0",
+  "id": "D2-LXX",
+  "domain": "D2",
+  "title": "Lesson title",
+  "difficulty": "Professional",
+  "estimated_minutes": 90,
+  "as_of": "YYYY-MM-DD",
+  "learning_outcomes": [
+    "Explain ...",
+    "Select ...",
+    "Evaluate ..."
+  ],
+  "prerequisites": [
+    "Prerequisite concept"
+  ],
+  "executive_orientation": "Why this matters in a real system.",
+  "first_principles": "Detailed explanation from first principles.",
+  "technical_deep_dive": "Components, mechanisms, interfaces, data flow, constraints.",
+  "architecture_pattern": {
+    "when_to_use": [],
+    "when_not_to_use": [],
+    "alternatives": [],
+    "decision_criteria": []
+  },
+  "diagram_mermaid": "flowchart TD\\n A[Input] --> B[Process]",
+  "worked_example": {
+    "scenario": "",
+    "assumptions": [],
+    "walkthrough": [],
+    "expected_result": ""
+  },
+  "implementation_lab": {
+    "objective": "",
+    "steps": [],
+    "code_language": "python",
+    "code": "",
+    "verification": []
+  },
+  "tradeoffs": [
+    {
+      "dimension": "Latency",
+      "option_a": "...",
+      "option_b": "...",
+      "consideration": "..."
+    }
+  ],
+  "failure_modes": [
+    {
+      "failure": "",
+      "symptoms": "",
+      "cause": "",
+      "mitigation": "",
+      "recovery": ""
+    }
+  ],
+  "security_governance": [
+    "Trust boundaries ..."
+  ],
+  "evaluation": {
+    "metrics": [],
+    "test_design": [],
+    "acceptance_criteria": []
+  },
+  "production_checklist": [
+    "..."
+  ],
+  "case_study": {
+    "scenario": "",
+    "constraints": [],
+    "task": "",
+    "rubric": [],
+    "exemplar_reasoning": ""
+  },
+  "knowledge_check": [
+    {
+      "id": "Q1",
+      "type": "scenario",
+      "question": "",
+      "answer": "",
+      "explanation": "",
+      "difficulty": "Advanced"
+    }
+  ],
+  "architect_challenge": {
+    "task": "",
+    "rubric": []
+  },
+  "further_reading": [
+    {
+      "title": "",
+      "url": "",
+      "source_type": "primary",
+      "last_verified": ""
+    }
+  ],
+  "key_takeaways": [
+    "..."
+  ],
+  "tags": [
+    "..."
+  ]
+}

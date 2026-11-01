@@ -1,0 +1,5 @@
+[project]
+name = "ccarp-intelligence-academy"
+version = "2.1.0"
+requires-python = ">=3.10"
+dependencies = ["streamlit>=1.36,<2", "requests>=2.31,<3"]

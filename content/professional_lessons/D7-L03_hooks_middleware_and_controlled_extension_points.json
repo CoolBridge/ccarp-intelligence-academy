@@ -1,0 +1,265 @@
+{
+  "schema_version": "2.0",
+  "id": "D7-L03",
+  "domain": "D7",
+  "title": "Hooks, Middleware and Controlled Extension Points",
+  "difficulty": "Professional",
+  "estimated_minutes": 95,
+  "as_of": "2026-11-01",
+  "learning_outcomes": [
+    "Explain the core principles and boundaries of hooks, middleware and controlled extension points.",
+    "Select and justify an appropriate architecture pattern for a realistic system.",
+    "Identify failure modes, security risks and operational constraints.",
+    "Implement or evaluate a representative design using a repeatable lab.",
+    "Defend the design using measurable acceptance criteria and explicit trade-offs."
+  ],
+  "prerequisites": [
+    "Basic software engineering and system design",
+    "Foundational understanding of LLM applications",
+    "Familiarity with Python and JSON is helpful"
+  ],
+  "executive_orientation": "Hooks and extension points let developers add cross-cutting behaviour without modifying every component. They must be designed as constrained interfaces with clear lifecycle, ordering, error and security semantics.",
+  "first_principles": "A hook is a defined point where a controlled extension can observe or influence execution. Examples include pre-request validation, post-response checks, tool authorization, logging, redaction and evaluation callbacks. Hooks can improve consistency but can also create hidden control flow, ordering bugs and security bypasses.",
+  "technical_deep_dive": "Define hook contracts: event name, input schema, allowed mutations, execution order, timeout, error policy and permissions. Prefer immutable event payloads where possible. Keep security-critical controls mandatory and centrally enforced; do not allow optional plugins to disable them. Version hook interfaces and test extension compatibility.",
+  "architecture_pattern": {
+    "when_to_use": [
+      "The task has multiple components or competing requirements.",
+      "Quality, security, latency or cost must be measured and defended.",
+      "The system will be operated and changed after initial release."
+    ],
+    "when_not_to_use": [
+      "A simpler deterministic process already meets the requirement.",
+      "The proposed design adds complexity without a measurable benefit."
+    ],
+    "alternatives": [
+      "A deterministic workflow or rules engine",
+      "A bounded model-assisted component with human review",
+      "A managed integration with narrower permissions"
+    ],
+    "decision_criteria": [
+      "Task variability and consequence of error",
+      "Data sensitivity and permission boundaries",
+      "Latency, reliability and cost envelope",
+      "Operational ownership and maintainability",
+      "Ability to test and reverse the decision"
+    ]
+  },
+  "diagram_mermaid": "flowchart TD\n A[Request enters pipeline] --> B[Pre-execution hooks]\n B --> C[Core operation]\n C --> D[Post-operation validation hooks]\n D --> E[Audit and response]\n F[Extension registry] --> B\n F --> D\n G[Policy guard] --> B",
+  "worked_example": {
+    "scenario": "A platform supports extensions that redact sensitive fields, add trace IDs and evaluate output quality. A plugin may enrich metadata but cannot override access checks or remove mandatory audit events.",
+    "assumptions": [
+      "The use case has an identified owner and approved purpose.",
+      "The system has defined access boundaries and representative test data.",
+      "Consequential actions are subject to policy and human oversight where required."
+    ],
+    "walkthrough": [
+      "Clarify the user outcome and define measurable success.",
+      "Map inputs, data sources, trust boundaries and system dependencies.",
+      "Select the simplest architecture that meets requirements.",
+      "Define interfaces, state transitions, validation and failure handling.",
+      "Implement a bounded proof of concept with synthetic or approved data.",
+      "Evaluate normal, edge, adversarial and degraded scenarios.",
+      "Document the decision, limitations, owner and release conditions."
+    ],
+    "expected_result": "A documented architecture with explicit assumptions, testable acceptance criteria, controlled failure behaviour and a clear operational owner."
+  },
+  "implementation_lab": {
+    "objective": "Design a hook registry with event names, schema versions, timeout and failure policy. Simulate a redaction hook and a failing optional analytics hook. Ensure a security validation hook cannot be disabled by configuration.",
+    "steps": [
+      "Write down the requirements and assumptions before coding.",
+      "Implement the smallest deterministic representation of the control or design.",
+      "Add at least three positive and three negative tests.",
+      "Record the expected output and compare actual behaviour.",
+      "Write a short architecture note explaining what the prototype does not prove."
+    ],
+    "code_language": "python",
+    "code": "HOOKS = {'before_tool': [], 'after_response': []}\n\ndef register(event, fn, mandatory=False):\n    HOOKS[event].append({'fn': fn, 'mandatory': mandatory})\n\ndef run_hooks(event, payload):\n    for hook in HOOKS.get(event, []):\n        try: payload = hook['fn'](payload)\n        except Exception:\n            if hook['mandatory']: raise\n    return payload\n",
+    "verification": [
+      "Add hook ordering, immutable payload copies, timeout and schema version. Test malicious extensions and verify mandatory policy checks always execute.",
+      "Run the exercise in a clean Python environment and retain the test evidence.",
+      "Identify which production concerns are outside the scope of this small lab."
+    ]
+  },
+  "tradeoffs": [
+    {
+      "dimension": "Complexity versus capability",
+      "option_a": "Use the simplest deterministic component",
+      "option_b": "Introduce model-driven or distributed orchestration",
+      "consideration": "Inline code versus hooks: inline is explicit but duplicates logic; hooks centralise cross-cutting behaviour but can hide flow. Synchronous versus asynchronous hooks: sync guarantees ordering but adds latency; async improves throughput but may lose immediate guarantees."
+    },
+    {
+      "dimension": "Automation versus oversight",
+      "option_a": "Automate the complete path",
+      "option_b": "Require human review at consequential boundaries",
+      "consideration": "Automation reduces handling effort; oversight provides accountability and recovery. Choose based on impact, reversibility and evidence of reliability."
+    },
+    {
+      "dimension": "Speed versus assurance",
+      "option_a": "Release quickly with limited checks",
+      "option_b": "Use staged rollout and layered evaluation",
+      "consideration": "A faster release is not beneficial if it increases downstream failure cost or makes recovery difficult."
+    }
+  ],
+  "failure_modes": [
+    {
+      "failure": "Ambiguous requirements",
+      "symptoms": "Stakeholders disagree about success or the system solves the wrong problem",
+      "cause": "Assumptions were not validated",
+      "mitigation": "Use measurable outcomes, examples and sign-off",
+      "recovery": "Pause scope expansion and re-baseline requirements."
+    },
+    {
+      "failure": "Boundary or permission failure",
+      "symptoms": "Data or actions are available to an unintended user or component",
+      "cause": "Authorization was assumed rather than enforced",
+      "mitigation": "Enforce least privilege at the service boundary",
+      "recovery": "Revoke access, investigate logs and remediate exposure."
+    },
+    {
+      "failure": "Unvalidated output or state",
+      "symptoms": "Malformed, inconsistent or unsupported result reaches downstream system",
+      "cause": "Trust was placed in model output without independent checks",
+      "mitigation": "Use schemas, semantic validation and source checks",
+      "recovery": "Quarantine result and route for review."
+    },
+    {
+      "failure": "Dependency or service outage",
+      "symptoms": "Requests time out or tasks remain incomplete",
+      "cause": "No bounded retry, fallback or recovery path",
+      "mitigation": "Use timeouts, circuit breakers, durable state and runbooks",
+      "recovery": "Enter degraded mode and reconcile pending work."
+    },
+    {
+      "failure": "Unobserved quality drift",
+      "symptoms": "Users report declining quality despite healthy uptime",
+      "cause": "Only infrastructure metrics were monitored",
+      "mitigation": "Track task-level quality and review samples",
+      "recovery": "Roll back or adjust the affected component and rerun evaluation."
+    }
+  ],
+  "security_governance": [
+    "Run extensions with least privilege and restricted runtime. Validate extension provenance and version. Prevent hooks from reading secrets unless explicitly authorised. Audit extension registration and changes.",
+    "Use least privilege and enforce access decisions outside the model.",
+    "Treat external content and tool results as untrusted data.",
+    "Minimise data collection and retention; keep secrets out of prompts and logs.",
+    "Record decisions and approvals with enough metadata for audit and incident review."
+  ],
+  "evaluation": {
+    "metrics": [
+      "Task completion and critical error rate",
+      "Latency percentiles and resource consumption",
+      "Validation and policy-denial rates",
+      "Human override or escalation rate",
+      "Cost per successfully completed task"
+    ],
+    "test_design": [
+      "Representative normal cases",
+      "Boundary and malformed-input cases",
+      "Adversarial or malicious-input cases",
+      "Timeout, unavailable dependency and partial-failure cases",
+      "Regression tests for every behaviour-affecting change"
+    ],
+    "acceptance_criteria": [
+      "No critical authorization or safety test fails.",
+      "Required output or interface contracts are validated.",
+      "Failure behaviour is observable and recoverable.",
+      "Performance meets the agreed operating envelope.",
+      "Known limitations and residual risks are documented."
+    ]
+  },
+  "production_checklist": [
+    "Hook contracts and event schemas are documented.",
+    "Mandatory security controls cannot be bypassed.",
+    "Ordering, timeout and failure semantics are defined.",
+    "Extensions run with least privilege.",
+    "Version compatibility and audit are implemented."
+  ],
+  "case_study": {
+    "scenario": "A third-party extension adds logging to an agent but requests access to all prompts, user records and credentials. Decide how to assess and constrain the extension.",
+    "constraints": [
+      "Limited engineering time and operating budget",
+      "A need for accountable ownership and explainable decisions",
+      "Potential external dependencies and changing inputs",
+      "A requirement to preserve user trust and recover from failure"
+    ],
+    "task": "Submit a hook API contract, extension threat model, execution policy and compatibility test suite.",
+    "rubric": [
+      "25% problem framing and requirements traceability",
+      "20% architecture and interface quality",
+      "20% security, privacy and failure handling",
+      "20% evaluation and operational readiness",
+      "15% clarity of trade-off defence"
+    ],
+    "exemplar_reasoning": "Reject broad access. Define minimum telemetry fields, redact content, exclude credentials, isolate the extension, scope permissions, review provenance and require approval before enabling it."
+  },
+  "knowledge_check": [
+    {
+      "id": "D7-L03-Q1",
+      "type": "comprehension",
+      "difficulty": "Core",
+      "question": "What is the central architectural principle behind hooks, middleware and controlled extension points?",
+      "answer": "Hooks and extension points let developers add cross-cutting behaviour without modifying every component. They must be designed as constrained interfaces with clear lifecycle, ordering, error and security semantics.",
+      "explanation": "A strong answer links the concept to requirements, system boundaries and measurable behaviour."
+    },
+    {
+      "id": "D7-L03-Q2",
+      "type": "scenario",
+      "difficulty": "Advanced",
+      "question": "A prototype succeeds on a happy-path demonstration. Is that sufficient for production approval? Explain the additional evidence required.",
+      "answer": "No. Require representative evaluation, negative and adversarial tests, authorization checks, failure recovery, operational metrics, ownership and documented limitations.",
+      "explanation": "A demo demonstrates possibility, not reliability, safety or operational readiness."
+    },
+    {
+      "id": "D7-L03-Q3",
+      "type": "architect_judgement",
+      "difficulty": "Advanced",
+      "question": "How should an architect justify choosing a more complex design over a simpler alternative?",
+      "answer": "Show that the simpler alternative fails a material requirement and that the added capability's benefits exceed its cost, risk and operational burden.",
+      "explanation": "Complexity needs evidence-based justification."
+    },
+    {
+      "id": "D7-L03-Q4",
+      "type": "failure_analysis",
+      "difficulty": "Advanced",
+      "question": "Name two failure modes that should be tested before release and describe a mitigation.",
+      "answer": "Hook ordering conflict: define deterministic order. Optional hook disables control: separate mandatory policy. Slow hook: timeout and isolate. Extension supply-chain risk: review and pin. Mutation surprise: use immutable event payloads.",
+      "explanation": "Failure analysis should connect symptoms to causes, controls and recovery."
+    }
+  ],
+  "architect_challenge": {
+    "task": "Submit a hook API contract, extension threat model, execution policy and compatibility test suite.",
+    "rubric": [
+      "Requirements and constraints are explicit",
+      "Architecture choices are justified against alternatives",
+      "Trust and permission boundaries are enforced",
+      "Failure handling and evaluation are measurable",
+      "Operational ownership and rollback are documented"
+    ]
+  },
+  "further_reading": [
+    {
+      "title": "https://docs.anthropic.com/",
+      "url": "https://docs.anthropic.com/",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    },
+    {
+      "title": "https://www.anthropic.com/engineering",
+      "url": "https://www.anthropic.com/engineering",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    }
+  ],
+  "key_takeaways": [
+    "Hooks and extension points let developers add cross-cutting behaviour without modifying every component. They must be designed as constrained interfaces with clear lifecycle, ordering, error and security semantics.",
+    "Inline code versus hooks: inline is explicit but duplicates logic; hooks centralise cross-cutting behaviour but can hide flow. Synchronous versus asynchronous hooks: sync guarantees ordering but adds latency; async improves throughput but may lose immediate guarantees.",
+    "Validate behaviour independently and measure outcomes.",
+    "Treat security, operations and governance as part of the architecture from the start."
+  ],
+  "tags": [
+    "d7",
+    "professional-architecture",
+    "implementation-lab",
+    "production-readiness"
+  ]
+}

@@ -1,0 +1,266 @@
+{
+  "schema_version": "2.0",
+  "id": "D1-L06",
+  "domain": "D1",
+  "title": "Reliability Engineering and Graceful Degradation",
+  "difficulty": "Professional",
+  "estimated_minutes": 95,
+  "as_of": "2026-11-01",
+  "learning_outcomes": [
+    "Explain the core principles and boundaries of reliability engineering and graceful degradation.",
+    "Select and justify an appropriate architecture pattern for a realistic system.",
+    "Identify failure modes, security risks and operational constraints.",
+    "Implement or evaluate a representative design using a repeatable lab.",
+    "Defend the design using measurable acceptance criteria and explicit trade-offs."
+  ],
+  "prerequisites": [
+    "Basic software engineering and system design",
+    "Foundational understanding of LLM applications",
+    "Familiarity with Python and JSON is helpful"
+  ],
+  "executive_orientation": "Reliability means the system behaves acceptably when components fail, not that every dependency is always available. Graceful degradation preserves safe core functions when optional capabilities are unavailable.",
+  "first_principles": "Model the system as dependencies and failure domains. Identify single points of failure, timeouts, retry amplification, queue backlogs, partial completion and stale state. Define what the system should do when retrieval, model provider, tools, database or identity services are unavailable. A safe degraded response may be read-only, delayed or human-routed.",
+  "technical_deep_dive": "Use timeouts, bounded retries with jitter, circuit breakers, bulkheads, idempotency, queues, dead-letter handling, health checks and compensating actions. Set per-stage budgets within an end-to-end deadline. Design fallback modes deliberately; do not silently replace a high-quality model with a lower-quality model without validation. Persist task state so work can resume or reconcile.",
+  "architecture_pattern": {
+    "when_to_use": [
+      "The task has multiple components or competing requirements.",
+      "Quality, security, latency or cost must be measured and defended.",
+      "The system will be operated and changed after initial release."
+    ],
+    "when_not_to_use": [
+      "A simpler deterministic process already meets the requirement.",
+      "The proposed design adds complexity without a measurable benefit."
+    ],
+    "alternatives": [
+      "A deterministic workflow or rules engine",
+      "A bounded model-assisted component with human review",
+      "A managed integration with narrower permissions"
+    ],
+    "decision_criteria": [
+      "Task variability and consequence of error",
+      "Data sensitivity and permission boundaries",
+      "Latency, reliability and cost envelope",
+      "Operational ownership and maintainability",
+      "Ability to test and reverse the decision"
+    ]
+  },
+  "diagram_mermaid": "flowchart TD\n A[Request] --> B[Dependency health check]\n B --> C{Core dependencies available?}\n C -->|Yes| D[Normal execution]\n C -->|Partial outage| E[Safe degraded mode]\n C -->|No| F[Queue or fail safely]\n D --> G[Observe and reconcile]\n E --> G\n F --> G",
+  "worked_example": {
+    "scenario": "A document assistant loses access to its embedding service. It can still serve exact metadata lookups from a database but cannot perform semantic search. It informs users that semantic retrieval is unavailable rather than fabricating answers.",
+    "assumptions": [
+      "The use case has an identified owner and approved purpose.",
+      "The system has defined access boundaries and representative test data.",
+      "Consequential actions are subject to policy and human oversight where required."
+    ],
+    "walkthrough": [
+      "Clarify the user outcome and define measurable success.",
+      "Map inputs, data sources, trust boundaries and system dependencies.",
+      "Select the simplest architecture that meets requirements.",
+      "Define interfaces, state transitions, validation and failure handling.",
+      "Implement a bounded proof of concept with synthetic or approved data.",
+      "Evaluate normal, edge, adversarial and degraded scenarios.",
+      "Document the decision, limitations, owner and release conditions."
+    ],
+    "expected_result": "A documented architecture with explicit assumptions, testable acceptance criteria, controlled failure behaviour and a clear operational owner."
+  },
+  "implementation_lab": {
+    "objective": "Simulate a service with a timeout and circuit-breaker state. Define retry count, open/half-open states and degraded behaviour. Test that a side-effecting operation is not repeated automatically.",
+    "steps": [
+      "Write down the requirements and assumptions before coding.",
+      "Implement the smallest deterministic representation of the control or design.",
+      "Add at least three positive and three negative tests.",
+      "Record the expected output and compare actual behaviour.",
+      "Write a short architecture note explaining what the prototype does not prove."
+    ],
+    "code_language": "python",
+    "code": "class CircuitBreaker:\n    def __init__(self, threshold=3): self.threshold=threshold; self.failures=0; self.open=False\n    def success(self): self.failures=0; self.open=False\n    def failure(self):\n        self.failures += 1\n        if self.failures >= self.threshold: self.open=True\n\nb=CircuitBreaker()\nfor _ in range(3): b.failure()\nassert b.open\n",
+    "verification": [
+      "Add a half-open recovery probe and a bounded request deadline. Demonstrate that the service does not retry a non-idempotent write without an idempotency mechanism.",
+      "Run the exercise in a clean Python environment and retain the test evidence.",
+      "Identify which production concerns are outside the scope of this small lab."
+    ]
+  },
+  "tradeoffs": [
+    {
+      "dimension": "Complexity versus capability",
+      "option_a": "Use the simplest deterministic component",
+      "option_b": "Introduce model-driven or distributed orchestration",
+      "consideration": "Retry versus circuit breaker: retry handles transient errors; circuit breaker prevents overload. Active-active versus simpler redundancy: availability increases but state consistency becomes harder. Queue versus synchronous response: queues absorb spikes but change user expectations."
+    },
+    {
+      "dimension": "Automation versus oversight",
+      "option_a": "Automate the complete path",
+      "option_b": "Require human review at consequential boundaries",
+      "consideration": "Automation reduces handling effort; oversight provides accountability and recovery. Choose based on impact, reversibility and evidence of reliability."
+    },
+    {
+      "dimension": "Speed versus assurance",
+      "option_a": "Release quickly with limited checks",
+      "option_b": "Use staged rollout and layered evaluation",
+      "consideration": "A faster release is not beneficial if it increases downstream failure cost or makes recovery difficult."
+    }
+  ],
+  "failure_modes": [
+    {
+      "failure": "Ambiguous requirements",
+      "symptoms": "Stakeholders disagree about success or the system solves the wrong problem",
+      "cause": "Assumptions were not validated",
+      "mitigation": "Use measurable outcomes, examples and sign-off",
+      "recovery": "Pause scope expansion and re-baseline requirements."
+    },
+    {
+      "failure": "Boundary or permission failure",
+      "symptoms": "Data or actions are available to an unintended user or component",
+      "cause": "Authorization was assumed rather than enforced",
+      "mitigation": "Enforce least privilege at the service boundary",
+      "recovery": "Revoke access, investigate logs and remediate exposure."
+    },
+    {
+      "failure": "Unvalidated output or state",
+      "symptoms": "Malformed, inconsistent or unsupported result reaches downstream system",
+      "cause": "Trust was placed in model output without independent checks",
+      "mitigation": "Use schemas, semantic validation and source checks",
+      "recovery": "Quarantine result and route for review."
+    },
+    {
+      "failure": "Dependency or service outage",
+      "symptoms": "Requests time out or tasks remain incomplete",
+      "cause": "No bounded retry, fallback or recovery path",
+      "mitigation": "Use timeouts, circuit breakers, durable state and runbooks",
+      "recovery": "Enter degraded mode and reconcile pending work."
+    },
+    {
+      "failure": "Unobserved quality drift",
+      "symptoms": "Users report declining quality despite healthy uptime",
+      "cause": "Only infrastructure metrics were monitored",
+      "mitigation": "Track task-level quality and review samples",
+      "recovery": "Roll back or adjust the affected component and rerun evaluation."
+    }
+  ],
+  "security_governance": [
+    "Fail closed for authorization and high-impact operations. Do not expose cached data across permission changes. Keep incident logs and user-facing status accurate.",
+    "Use least privilege and enforce access decisions outside the model.",
+    "Treat external content and tool results as untrusted data.",
+    "Minimise data collection and retention; keep secrets out of prompts and logs.",
+    "Record decisions and approvals with enough metadata for audit and incident review."
+  ],
+  "evaluation": {
+    "metrics": [
+      "Task completion and critical error rate",
+      "Latency percentiles and resource consumption",
+      "Validation and policy-denial rates",
+      "Human override or escalation rate",
+      "Cost per successfully completed task"
+    ],
+    "test_design": [
+      "Representative normal cases",
+      "Boundary and malformed-input cases",
+      "Adversarial or malicious-input cases",
+      "Timeout, unavailable dependency and partial-failure cases",
+      "Regression tests for every behaviour-affecting change"
+    ],
+    "acceptance_criteria": [
+      "No critical authorization or safety test fails.",
+      "Required output or interface contracts are validated.",
+      "Failure behaviour is observable and recoverable.",
+      "Performance meets the agreed operating envelope.",
+      "Known limitations and residual risks are documented."
+    ]
+  },
+  "production_checklist": [
+    "Dependency map and failure domains are documented.",
+    "Timeouts and retry budgets are bounded.",
+    "Circuit breakers and backpressure are used where needed.",
+    "Degraded modes are explicit and safe.",
+    "Task state and idempotency support recovery.",
+    "Recovery is tested, not assumed."
+  ],
+  "case_study": {
+    "scenario": "During a provider outage, your agent continues retrying and causes a backlog that delays all users. Redesign the reliability architecture.",
+    "constraints": [
+      "Limited engineering time and operating budget",
+      "A need for accountable ownership and explainable decisions",
+      "Potential external dependencies and changing inputs",
+      "A requirement to preserve user trust and recover from failure"
+    ],
+    "task": "Submit a failure-mode analysis, dependency map, degraded-mode matrix and recovery runbook.",
+    "rubric": [
+      "25% problem framing and requirements traceability",
+      "20% architecture and interface quality",
+      "20% security, privacy and failure handling",
+      "20% evaluation and operational readiness",
+      "15% clarity of trade-off defence"
+    ],
+    "exemplar_reasoning": "Use concurrency limits, bounded retries with jitter, circuit breaker, queueing and priority handling. Return a transparent degraded status; preserve task state; avoid retrying writes without idempotency; reconcile after recovery."
+  },
+  "knowledge_check": [
+    {
+      "id": "D1-L06-Q1",
+      "type": "comprehension",
+      "difficulty": "Core",
+      "question": "What is the central architectural principle behind reliability engineering and graceful degradation?",
+      "answer": "Reliability means the system behaves acceptably when components fail, not that every dependency is always available. Graceful degradation preserves safe core functions when optional capabilities are unavailable.",
+      "explanation": "A strong answer links the concept to requirements, system boundaries and measurable behaviour."
+    },
+    {
+      "id": "D1-L06-Q2",
+      "type": "scenario",
+      "difficulty": "Advanced",
+      "question": "A prototype succeeds on a happy-path demonstration. Is that sufficient for production approval? Explain the additional evidence required.",
+      "answer": "No. Require representative evaluation, negative and adversarial tests, authorization checks, failure recovery, operational metrics, ownership and documented limitations.",
+      "explanation": "A demo demonstrates possibility, not reliability, safety or operational readiness."
+    },
+    {
+      "id": "D1-L06-Q3",
+      "type": "architect_judgement",
+      "difficulty": "Advanced",
+      "question": "How should an architect justify choosing a more complex design over a simpler alternative?",
+      "answer": "Show that the simpler alternative fails a material requirement and that the added capability's benefits exceed its cost, risk and operational burden.",
+      "explanation": "Complexity needs evidence-based justification."
+    },
+    {
+      "id": "D1-L06-Q4",
+      "type": "failure_analysis",
+      "difficulty": "Advanced",
+      "question": "Name two failure modes that should be tested before release and describe a mitigation.",
+      "answer": "Retry storm: add jitter and budgets. Cascading failure: use bulkheads. Lost task state: persist workflow state. Duplicate side effects: idempotency. Unsafe fallback: define capability-specific degraded modes.",
+      "explanation": "Failure analysis should connect symptoms to causes, controls and recovery."
+    }
+  ],
+  "architect_challenge": {
+    "task": "Submit a failure-mode analysis, dependency map, degraded-mode matrix and recovery runbook.",
+    "rubric": [
+      "Requirements and constraints are explicit",
+      "Architecture choices are justified against alternatives",
+      "Trust and permission boundaries are enforced",
+      "Failure handling and evaluation are measurable",
+      "Operational ownership and rollback are documented"
+    ]
+  },
+  "further_reading": [
+    {
+      "title": "https://www.anthropic.com/engineering",
+      "url": "https://www.anthropic.com/engineering",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    },
+    {
+      "title": "https://docs.anthropic.com/",
+      "url": "https://docs.anthropic.com/",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    }
+  ],
+  "key_takeaways": [
+    "Reliability means the system behaves acceptably when components fail, not that every dependency is always available. Graceful degradation preserves safe core functions when optional capabilities are unavailable.",
+    "Retry versus circuit breaker: retry handles transient errors; circuit breaker prevents overload. Active-active versus simpler redundancy: availability increases but state consistency becomes harder. Queue versus synchronous response: queues absorb spikes but change user expectations.",
+    "Validate behaviour independently and measure outcomes.",
+    "Treat security, operations and governance as part of the architecture from the start."
+  ],
+  "tags": [
+    "d1",
+    "professional-architecture",
+    "implementation-lab",
+    "production-readiness"
+  ]
+}

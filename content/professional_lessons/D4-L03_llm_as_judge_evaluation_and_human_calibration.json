@@ -1,0 +1,265 @@
+{
+  "schema_version": "2.0",
+  "id": "D4-L03",
+  "domain": "D4",
+  "title": "LLM-as-Judge Evaluation and Human Calibration",
+  "difficulty": "Professional",
+  "estimated_minutes": 95,
+  "as_of": "2026-11-01",
+  "learning_outcomes": [
+    "Explain the core principles and boundaries of llm-as-judge evaluation and human calibration.",
+    "Select and justify an appropriate architecture pattern for a realistic system.",
+    "Identify failure modes, security risks and operational constraints.",
+    "Implement or evaluate a representative design using a repeatable lab.",
+    "Defend the design using measurable acceptance criteria and explicit trade-offs."
+  ],
+  "prerequisites": [
+    "Basic software engineering and system design",
+    "Foundational understanding of LLM applications",
+    "Familiarity with Python and JSON is helpful"
+  ],
+  "executive_orientation": "An LLM judge can scale rubric-based evaluation, but it is itself a fallible evaluator. It should be calibrated against human judgement and used with clear rubrics, blinded comparisons and disagreement analysis.",
+  "first_principles": "LLM-as-judge uses a model to score or compare outputs against criteria. It is useful for dimensions difficult to score exactly, such as relevance, completeness or style. Risks include position bias, verbosity bias, preference for familiar phrasing, self-preference and inconsistent scoring. It cannot be treated as ground truth.",
+  "technical_deep_dive": "Write criteria with observable anchors and examples. Use pairwise comparisons or absolute scoring consistently. Blind model identity where possible. Randomise answer order in pairwise tests. Use a human-labelled calibration set; measure agreement and inspect disagreements. Route high-impact or low-agreement cases to human review. Keep judge prompts and versions under evaluation.",
+  "architecture_pattern": {
+    "when_to_use": [
+      "The task has multiple components or competing requirements.",
+      "Quality, security, latency or cost must be measured and defended.",
+      "The system will be operated and changed after initial release."
+    ],
+    "when_not_to_use": [
+      "A simpler deterministic process already meets the requirement.",
+      "The proposed design adds complexity without a measurable benefit."
+    ],
+    "alternatives": [
+      "A deterministic workflow or rules engine",
+      "A bounded model-assisted component with human review",
+      "A managed integration with narrower permissions"
+    ],
+    "decision_criteria": [
+      "Task variability and consequence of error",
+      "Data sensitivity and permission boundaries",
+      "Latency, reliability and cost envelope",
+      "Operational ownership and maintainability",
+      "Ability to test and reverse the decision"
+    ]
+  },
+  "diagram_mermaid": "flowchart TD\n A[Candidate outputs] --> B[Blinded rubric evaluation]\n B --> C[Judge scores and rationale]\n D[Human-labelled calibration set] --> E[Agreement analysis]\n C --> E\n E --> F{Agreement acceptable?}\n F -->|Yes| G[Use as one evaluation signal]\n F -->|No| H[Revise rubric or human review]",
+  "worked_example": {
+    "scenario": "A team compares two prompt versions for customer-support summaries. A judge scores factual completeness and clarity. Human reviewers label a sample; the team checks agreement and inspects cases where the judge favours a longer but less accurate answer.",
+    "assumptions": [
+      "The use case has an identified owner and approved purpose.",
+      "The system has defined access boundaries and representative test data.",
+      "Consequential actions are subject to policy and human oversight where required."
+    ],
+    "walkthrough": [
+      "Clarify the user outcome and define measurable success.",
+      "Map inputs, data sources, trust boundaries and system dependencies.",
+      "Select the simplest architecture that meets requirements.",
+      "Define interfaces, state transitions, validation and failure handling.",
+      "Implement a bounded proof of concept with synthetic or approved data.",
+      "Evaluate normal, edge, adversarial and degraded scenarios.",
+      "Document the decision, limitations, owner and release conditions."
+    ],
+    "expected_result": "A documented architecture with explicit assumptions, testable acceptance criteria, controlled failure behaviour and a clear operational owner."
+  },
+  "implementation_lab": {
+    "objective": "Write a four-criterion rubric with 1–5 anchors. Score five sample outputs manually, then design a judge prompt that scores the same criteria. Create a disagreement log and define when human adjudication is required.",
+    "steps": [
+      "Write down the requirements and assumptions before coding.",
+      "Implement the smallest deterministic representation of the control or design.",
+      "Add at least three positive and three negative tests.",
+      "Record the expected output and compare actual behaviour.",
+      "Write a short architecture note explaining what the prototype does not prove."
+    ],
+    "code_language": "python",
+    "code": "HUMAN = [4, 3, 5, 2, 4]\nJUDGE = [4, 4, 5, 2, 3]\n\nexact_agreement = sum(a == b for a,b in zip(HUMAN,JUDGE)) / len(HUMAN)\nmean_abs_error = sum(abs(a-b) for a,b in zip(HUMAN,JUDGE)) / len(HUMAN)\nprint({'exact_agreement': exact_agreement, 'mean_abs_error': mean_abs_error})\n",
+    "verification": [
+      "Evaluate judge agreement by criterion and task slice. Include adversarially verbose and superficially polished wrong answers. Use human review for critical decisions and report evaluator uncertainty.",
+      "Run the exercise in a clean Python environment and retain the test evidence.",
+      "Identify which production concerns are outside the scope of this small lab."
+    ]
+  },
+  "tradeoffs": [
+    {
+      "dimension": "Complexity versus capability",
+      "option_a": "Use the simplest deterministic component",
+      "option_b": "Introduce model-driven or distributed orchestration",
+      "consideration": "LLM judge versus human reviewer: judge scales but may be biased; human review is expensive but provides accountable judgement. Pairwise versus absolute scoring: pairwise may be more stable for preference; absolute scores map to rubrics but need calibration."
+    },
+    {
+      "dimension": "Automation versus oversight",
+      "option_a": "Automate the complete path",
+      "option_b": "Require human review at consequential boundaries",
+      "consideration": "Automation reduces handling effort; oversight provides accountability and recovery. Choose based on impact, reversibility and evidence of reliability."
+    },
+    {
+      "dimension": "Speed versus assurance",
+      "option_a": "Release quickly with limited checks",
+      "option_b": "Use staged rollout and layered evaluation",
+      "consideration": "A faster release is not beneficial if it increases downstream failure cost or makes recovery difficult."
+    }
+  ],
+  "failure_modes": [
+    {
+      "failure": "Ambiguous requirements",
+      "symptoms": "Stakeholders disagree about success or the system solves the wrong problem",
+      "cause": "Assumptions were not validated",
+      "mitigation": "Use measurable outcomes, examples and sign-off",
+      "recovery": "Pause scope expansion and re-baseline requirements."
+    },
+    {
+      "failure": "Boundary or permission failure",
+      "symptoms": "Data or actions are available to an unintended user or component",
+      "cause": "Authorization was assumed rather than enforced",
+      "mitigation": "Enforce least privilege at the service boundary",
+      "recovery": "Revoke access, investigate logs and remediate exposure."
+    },
+    {
+      "failure": "Unvalidated output or state",
+      "symptoms": "Malformed, inconsistent or unsupported result reaches downstream system",
+      "cause": "Trust was placed in model output without independent checks",
+      "mitigation": "Use schemas, semantic validation and source checks",
+      "recovery": "Quarantine result and route for review."
+    },
+    {
+      "failure": "Dependency or service outage",
+      "symptoms": "Requests time out or tasks remain incomplete",
+      "cause": "No bounded retry, fallback or recovery path",
+      "mitigation": "Use timeouts, circuit breakers, durable state and runbooks",
+      "recovery": "Enter degraded mode and reconcile pending work."
+    },
+    {
+      "failure": "Unobserved quality drift",
+      "symptoms": "Users report declining quality despite healthy uptime",
+      "cause": "Only infrastructure metrics were monitored",
+      "mitigation": "Track task-level quality and review samples",
+      "recovery": "Roll back or adjust the affected component and rerun evaluation."
+    }
+  ],
+  "security_governance": [
+    "Do not use judge scores as sole evidence for consequential decisions. Protect evaluation data. Document limitations and human adjudication.",
+    "Use least privilege and enforce access decisions outside the model.",
+    "Treat external content and tool results as untrusted data.",
+    "Minimise data collection and retention; keep secrets out of prompts and logs.",
+    "Record decisions and approvals with enough metadata for audit and incident review."
+  ],
+  "evaluation": {
+    "metrics": [
+      "Task completion and critical error rate",
+      "Latency percentiles and resource consumption",
+      "Validation and policy-denial rates",
+      "Human override or escalation rate",
+      "Cost per successfully completed task"
+    ],
+    "test_design": [
+      "Representative normal cases",
+      "Boundary and malformed-input cases",
+      "Adversarial or malicious-input cases",
+      "Timeout, unavailable dependency and partial-failure cases",
+      "Regression tests for every behaviour-affecting change"
+    ],
+    "acceptance_criteria": [
+      "No critical authorization or safety test fails.",
+      "Required output or interface contracts are validated.",
+      "Failure behaviour is observable and recoverable.",
+      "Performance meets the agreed operating envelope.",
+      "Known limitations and residual risks are documented."
+    ]
+  },
+  "production_checklist": [
+    "Rubric criteria have observable scoring anchors.",
+    "Judge is calibrated against human labels.",
+    "Position and verbosity bias are tested.",
+    "Disagreements are reviewed.",
+    "High-impact outcomes are not delegated solely to a judge."
+  ],
+  "case_study": {
+    "scenario": "Your automated judge consistently prefers polished responses that contain subtle factual errors. Diagnose and redesign the evaluation.",
+    "constraints": [
+      "Limited engineering time and operating budget",
+      "A need for accountable ownership and explainable decisions",
+      "Potential external dependencies and changing inputs",
+      "A requirement to preserve user trust and recover from failure"
+    ],
+    "task": "Submit a scoring rubric, judge protocol, calibration dataset plan and evaluator limitations statement.",
+    "rubric": [
+      "25% problem framing and requirements traceability",
+      "20% architecture and interface quality",
+      "20% security, privacy and failure handling",
+      "20% evaluation and operational readiness",
+      "15% clarity of trade-off defence"
+    ],
+    "exemplar_reasoning": "Separate factual correctness and evidence support from style; use source-grounded checks; add adversarial examples; blind answer identity; calibrate against expert review; treat judge confidence as uncertain and route disagreements to humans."
+  },
+  "knowledge_check": [
+    {
+      "id": "D4-L03-Q1",
+      "type": "comprehension",
+      "difficulty": "Core",
+      "question": "What is the central architectural principle behind llm-as-judge evaluation and human calibration?",
+      "answer": "An LLM judge can scale rubric-based evaluation, but it is itself a fallible evaluator. It should be calibrated against human judgement and used with clear rubrics, blinded comparisons and disagreement analysis.",
+      "explanation": "A strong answer links the concept to requirements, system boundaries and measurable behaviour."
+    },
+    {
+      "id": "D4-L03-Q2",
+      "type": "scenario",
+      "difficulty": "Advanced",
+      "question": "A prototype succeeds on a happy-path demonstration. Is that sufficient for production approval? Explain the additional evidence required.",
+      "answer": "No. Require representative evaluation, negative and adversarial tests, authorization checks, failure recovery, operational metrics, ownership and documented limitations.",
+      "explanation": "A demo demonstrates possibility, not reliability, safety or operational readiness."
+    },
+    {
+      "id": "D4-L03-Q3",
+      "type": "architect_judgement",
+      "difficulty": "Advanced",
+      "question": "How should an architect justify choosing a more complex design over a simpler alternative?",
+      "answer": "Show that the simpler alternative fails a material requirement and that the added capability's benefits exceed its cost, risk and operational burden.",
+      "explanation": "Complexity needs evidence-based justification."
+    },
+    {
+      "id": "D4-L03-Q4",
+      "type": "failure_analysis",
+      "difficulty": "Advanced",
+      "question": "Name two failure modes that should be tested before release and describe a mitigation.",
+      "answer": "Position bias: randomise order. Verbosity bias: score evidence and correctness explicitly. Self-preference: blind model identity. Rubric ambiguity: define anchors. Judge drift: version and recalibrate.",
+      "explanation": "Failure analysis should connect symptoms to causes, controls and recovery."
+    }
+  ],
+  "architect_challenge": {
+    "task": "Submit a scoring rubric, judge protocol, calibration dataset plan and evaluator limitations statement.",
+    "rubric": [
+      "Requirements and constraints are explicit",
+      "Architecture choices are justified against alternatives",
+      "Trust and permission boundaries are enforced",
+      "Failure handling and evaluation are measurable",
+      "Operational ownership and rollback are documented"
+    ]
+  },
+  "further_reading": [
+    {
+      "title": "https://www.anthropic.com/engineering",
+      "url": "https://www.anthropic.com/engineering",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    },
+    {
+      "title": "https://docs.anthropic.com/",
+      "url": "https://docs.anthropic.com/",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    }
+  ],
+  "key_takeaways": [
+    "An LLM judge can scale rubric-based evaluation, but it is itself a fallible evaluator. It should be calibrated against human judgement and used with clear rubrics, blinded comparisons and disagreement analysis.",
+    "LLM judge versus human reviewer: judge scales but may be biased; human review is expensive but provides accountable judgement. Pairwise versus absolute scoring: pairwise may be more stable for preference; absolute scores map to rubrics but need calibration.",
+    "Validate behaviour independently and measure outcomes.",
+    "Treat security, operations and governance as part of the architecture from the start."
+  ],
+  "tags": [
+    "d4",
+    "professional-architecture",
+    "implementation-lab",
+    "production-readiness"
+  ]
+}

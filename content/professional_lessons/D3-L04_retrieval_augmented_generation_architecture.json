@@ -1,0 +1,266 @@
+{
+  "schema_version": "2.0",
+  "id": "D3-L04",
+  "domain": "D3",
+  "title": "Retrieval-Augmented Generation Architecture",
+  "difficulty": "Professional",
+  "estimated_minutes": 95,
+  "as_of": "2026-11-01",
+  "learning_outcomes": [
+    "Explain the core principles and boundaries of retrieval-augmented generation architecture.",
+    "Select and justify an appropriate architecture pattern for a realistic system.",
+    "Identify failure modes, security risks and operational constraints.",
+    "Implement or evaluate a representative design using a repeatable lab.",
+    "Defend the design using measurable acceptance criteria and explicit trade-offs."
+  ],
+  "prerequisites": [
+    "Basic software engineering and system design",
+    "Foundational understanding of LLM applications",
+    "Familiarity with Python and JSON is helpful"
+  ],
+  "executive_orientation": "RAG connects model-generated language to an external evidence corpus. Its quality depends on the whole retrieval pipeline—source governance, parsing, chunking, indexing, ranking, context assembly and answer validation—not simply adding a vector database.",
+  "first_principles": "RAG is appropriate when answers depend on a changing or proprietary corpus that should not be embedded in model weights. The pipeline ingests documents, extracts text and metadata, chunks content, creates searchable representations, retrieves candidates, reranks or filters them, assembles evidence and generates an answer grounded in those sources.",
+  "technical_deep_dive": "Design ingestion separately from query-time retrieval. Preserve document identity, version, page/section, access scope and timestamps. Choose chunk size based on semantic boundaries and retrieval tests. Combine keyword and vector retrieval where useful. Apply authorization filters before evidence is sent to the model. Include citations and abstention behaviour. Evaluate retrieval and generation separately.",
+  "architecture_pattern": {
+    "when_to_use": [
+      "The task has multiple components or competing requirements.",
+      "Quality, security, latency or cost must be measured and defended.",
+      "The system will be operated and changed after initial release."
+    ],
+    "when_not_to_use": [
+      "A simpler deterministic process already meets the requirement.",
+      "The proposed design adds complexity without a measurable benefit."
+    ],
+    "alternatives": [
+      "A deterministic workflow or rules engine",
+      "A bounded model-assisted component with human review",
+      "A managed integration with narrower permissions"
+    ],
+    "decision_criteria": [
+      "Task variability and consequence of error",
+      "Data sensitivity and permission boundaries",
+      "Latency, reliability and cost envelope",
+      "Operational ownership and maintainability",
+      "Ability to test and reverse the decision"
+    ]
+  },
+  "diagram_mermaid": "flowchart TD\n A[Approved source documents] --> B[Parse and normalise]\n B --> C[Chunk with metadata]\n C --> D[Build search index]\n E[User query] --> F[Query rewrite or filter]\n F --> G[Retrieve and rank]\n D --> G\n G --> H[Permission and relevance checks]\n H --> I[Context assembly]\n I --> J[Grounded answer and citations]",
+  "worked_example": {
+    "scenario": "A policy assistant answers staff questions from approved policy documents. Documents are versioned; staff access is role-based. The assistant retrieves relevant sections, returns citations and says when evidence is insufficient.",
+    "assumptions": [
+      "The use case has an identified owner and approved purpose.",
+      "The system has defined access boundaries and representative test data.",
+      "Consequential actions are subject to policy and human oversight where required."
+    ],
+    "walkthrough": [
+      "Clarify the user outcome and define measurable success.",
+      "Map inputs, data sources, trust boundaries and system dependencies.",
+      "Select the simplest architecture that meets requirements.",
+      "Define interfaces, state transitions, validation and failure handling.",
+      "Implement a bounded proof of concept with synthetic or approved data.",
+      "Evaluate normal, edge, adversarial and degraded scenarios.",
+      "Document the decision, limitations, owner and release conditions."
+    ],
+    "expected_result": "A documented architecture with explicit assumptions, testable acceptance criteria, controlled failure behaviour and a clear operational owner."
+  },
+  "implementation_lab": {
+    "objective": "Create a miniature RAG design using three synthetic documents. Split into chunks with source IDs and section labels, implement keyword retrieval, assemble top results and return citations. Add a permission filter before retrieval results are exposed.",
+    "steps": [
+      "Write down the requirements and assumptions before coding.",
+      "Implement the smallest deterministic representation of the control or design.",
+      "Add at least three positive and three negative tests.",
+      "Record the expected output and compare actual behaviour.",
+      "Write a short architecture note explaining what the prototype does not prove."
+    ],
+    "code_language": "python",
+    "code": "docs = [\n {'id':'POL-1','role':'staff','text':'Leave requests require manager approval.'},\n {'id':'POL-2','role':'admin','text':'System administrators manage access.'},\n]\n\ndef retrieve(query, role):\n    terms=set(query.lower().split())\n    allowed=[d for d in docs if role in ('admin', d['role']) or d['role']=='staff']\n    return [d for d in allowed if terms & set(d['text'].lower().split())]\n\nprint(retrieve('manager approval leave', 'staff'))\n",
+    "verification": [
+      "Test retrieval recall and precision with labelled queries. Include stale documents, duplicate chunks, permission-restricted content, no-answer questions and conflicting sources. Do not treat keyword matching as production-grade semantic retrieval.",
+      "Run the exercise in a clean Python environment and retain the test evidence.",
+      "Identify which production concerns are outside the scope of this small lab."
+    ]
+  },
+  "tradeoffs": [
+    {
+      "dimension": "Complexity versus capability",
+      "option_a": "Use the simplest deterministic component",
+      "option_b": "Introduce model-driven or distributed orchestration",
+      "consideration": "Vector-only versus hybrid retrieval: vectors capture semantic similarity; keyword search is strong for exact identifiers. Small versus large chunks: small improves precision but may lose context; large preserves context but adds noise. Reranking improves relevance but adds latency and cost."
+    },
+    {
+      "dimension": "Automation versus oversight",
+      "option_a": "Automate the complete path",
+      "option_b": "Require human review at consequential boundaries",
+      "consideration": "Automation reduces handling effort; oversight provides accountability and recovery. Choose based on impact, reversibility and evidence of reliability."
+    },
+    {
+      "dimension": "Speed versus assurance",
+      "option_a": "Release quickly with limited checks",
+      "option_b": "Use staged rollout and layered evaluation",
+      "consideration": "A faster release is not beneficial if it increases downstream failure cost or makes recovery difficult."
+    }
+  ],
+  "failure_modes": [
+    {
+      "failure": "Ambiguous requirements",
+      "symptoms": "Stakeholders disagree about success or the system solves the wrong problem",
+      "cause": "Assumptions were not validated",
+      "mitigation": "Use measurable outcomes, examples and sign-off",
+      "recovery": "Pause scope expansion and re-baseline requirements."
+    },
+    {
+      "failure": "Boundary or permission failure",
+      "symptoms": "Data or actions are available to an unintended user or component",
+      "cause": "Authorization was assumed rather than enforced",
+      "mitigation": "Enforce least privilege at the service boundary",
+      "recovery": "Revoke access, investigate logs and remediate exposure."
+    },
+    {
+      "failure": "Unvalidated output or state",
+      "symptoms": "Malformed, inconsistent or unsupported result reaches downstream system",
+      "cause": "Trust was placed in model output without independent checks",
+      "mitigation": "Use schemas, semantic validation and source checks",
+      "recovery": "Quarantine result and route for review."
+    },
+    {
+      "failure": "Dependency or service outage",
+      "symptoms": "Requests time out or tasks remain incomplete",
+      "cause": "No bounded retry, fallback or recovery path",
+      "mitigation": "Use timeouts, circuit breakers, durable state and runbooks",
+      "recovery": "Enter degraded mode and reconcile pending work."
+    },
+    {
+      "failure": "Unobserved quality drift",
+      "symptoms": "Users report declining quality despite healthy uptime",
+      "cause": "Only infrastructure metrics were monitored",
+      "mitigation": "Track task-level quality and review samples",
+      "recovery": "Roll back or adjust the affected component and rerun evaluation."
+    }
+  ],
+  "security_governance": [
+    "Enforce source-level access control before retrieval. Minimise data sent to model. Preserve provenance. Treat documents as untrusted and defend against embedded instructions. Apply deletion and retention to source and index copies.",
+    "Use least privilege and enforce access decisions outside the model.",
+    "Treat external content and tool results as untrusted data.",
+    "Minimise data collection and retention; keep secrets out of prompts and logs.",
+    "Record decisions and approvals with enough metadata for audit and incident review."
+  ],
+  "evaluation": {
+    "metrics": [
+      "Task completion and critical error rate",
+      "Latency percentiles and resource consumption",
+      "Validation and policy-denial rates",
+      "Human override or escalation rate",
+      "Cost per successfully completed task"
+    ],
+    "test_design": [
+      "Representative normal cases",
+      "Boundary and malformed-input cases",
+      "Adversarial or malicious-input cases",
+      "Timeout, unavailable dependency and partial-failure cases",
+      "Regression tests for every behaviour-affecting change"
+    ],
+    "acceptance_criteria": [
+      "No critical authorization or safety test fails.",
+      "Required output or interface contracts are validated.",
+      "Failure behaviour is observable and recoverable.",
+      "Performance meets the agreed operating envelope.",
+      "Known limitations and residual risks are documented."
+    ]
+  },
+  "production_checklist": [
+    "Source corpus has owners and versioning.",
+    "Parsing preserves important structure and metadata.",
+    "Chunks retain provenance and access labels.",
+    "Retrieval is evaluated separately from generation.",
+    "Permissions are enforced before context assembly.",
+    "Citations and abstention are tested."
+  ],
+  "case_study": {
+    "scenario": "An internal assistant retrieves a superseded safety policy and gives staff outdated instructions. Redesign the indexing, retrieval and freshness strategy.",
+    "constraints": [
+      "Limited engineering time and operating budget",
+      "A need for accountable ownership and explainable decisions",
+      "Potential external dependencies and changing inputs",
+      "A requirement to preserve user trust and recover from failure"
+    ],
+    "task": "Submit a RAG architecture diagram, ingestion schema, chunking strategy, retrieval evaluation and security review.",
+    "rubric": [
+      "25% problem framing and requirements traceability",
+      "20% architecture and interface quality",
+      "20% security, privacy and failure handling",
+      "20% evaluation and operational readiness",
+      "15% clarity of trade-off defence"
+    ],
+    "exemplar_reasoning": "Use authoritative source hierarchy, version metadata, effective dates and deprecation flags; filter expired documents; refresh index on updates; cite document version and section; test stale-query cases and fail safely when source status is uncertain."
+  },
+  "knowledge_check": [
+    {
+      "id": "D3-L04-Q1",
+      "type": "comprehension",
+      "difficulty": "Core",
+      "question": "What is the central architectural principle behind retrieval-augmented generation architecture?",
+      "answer": "RAG connects model-generated language to an external evidence corpus. Its quality depends on the whole retrieval pipeline—source governance, parsing, chunking, indexing, ranking, context assembly and answer validation—not simply adding a vector database.",
+      "explanation": "A strong answer links the concept to requirements, system boundaries and measurable behaviour."
+    },
+    {
+      "id": "D3-L04-Q2",
+      "type": "scenario",
+      "difficulty": "Advanced",
+      "question": "A prototype succeeds on a happy-path demonstration. Is that sufficient for production approval? Explain the additional evidence required.",
+      "answer": "No. Require representative evaluation, negative and adversarial tests, authorization checks, failure recovery, operational metrics, ownership and documented limitations.",
+      "explanation": "A demo demonstrates possibility, not reliability, safety or operational readiness."
+    },
+    {
+      "id": "D3-L04-Q3",
+      "type": "architect_judgement",
+      "difficulty": "Advanced",
+      "question": "How should an architect justify choosing a more complex design over a simpler alternative?",
+      "answer": "Show that the simpler alternative fails a material requirement and that the added capability's benefits exceed its cost, risk and operational burden.",
+      "explanation": "Complexity needs evidence-based justification."
+    },
+    {
+      "id": "D3-L04-Q4",
+      "type": "failure_analysis",
+      "difficulty": "Advanced",
+      "question": "Name two failure modes that should be tested before release and describe a mitigation.",
+      "answer": "Poor parsing: preserve tables and headings. Wrong chunk size: tune on evaluation. Stale index: version and refresh. Permission leakage: filter before context assembly. Unsupported synthesis: require citations and abstention.",
+      "explanation": "Failure analysis should connect symptoms to causes, controls and recovery."
+    }
+  ],
+  "architect_challenge": {
+    "task": "Submit a RAG architecture diagram, ingestion schema, chunking strategy, retrieval evaluation and security review.",
+    "rubric": [
+      "Requirements and constraints are explicit",
+      "Architecture choices are justified against alternatives",
+      "Trust and permission boundaries are enforced",
+      "Failure handling and evaluation are measurable",
+      "Operational ownership and rollback are documented"
+    ]
+  },
+  "further_reading": [
+    {
+      "title": "https://www.anthropic.com/engineering",
+      "url": "https://www.anthropic.com/engineering",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    },
+    {
+      "title": "https://docs.anthropic.com/",
+      "url": "https://docs.anthropic.com/",
+      "source_type": "primary",
+      "last_verified": "2026-11-01"
+    }
+  ],
+  "key_takeaways": [
+    "RAG connects model-generated language to an external evidence corpus. Its quality depends on the whole retrieval pipeline—source governance, parsing, chunking, indexing, ranking, context assembly and answer validation—not simply adding a vector database.",
+    "Vector-only versus hybrid retrieval: vectors capture semantic similarity; keyword search is strong for exact identifiers. Small versus large chunks: small improves precision but may lose context; large preserves context but adds noise. Reranking improves relevance but adds latency and cost.",
+    "Validate behaviour independently and measure outcomes.",
+    "Treat security, operations and governance as part of the architecture from the start."
+  ],
+  "tags": [
+    "d3",
+    "professional-architecture",
+    "implementation-lab",
+    "production-readiness"
+  ]
+}

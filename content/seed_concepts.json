@@ -1,0 +1,263 @@
+[
+  {
+    "id": "C001",
+    "domain": "D1",
+    "title": "Deterministic workflows vs agentic systems",
+    "difficulty": "Core concept",
+    "core_idea": "Use deterministic workflows when steps and decision rules are known; use agentic behaviour when the system must dynamically choose actions.",
+    "architect_note": "Autonomy adds flexibility but also latency, non-determinism and failure surfaces. Use the simplest architecture that meets requirements.",
+    "explanation": "Autonomy adds flexibility but also latency, non-determinism and failure surfaces. Use the simplest architecture that meets requirements."
+  },
+  {
+    "id": "C002",
+    "domain": "D1",
+    "title": "Orchestration and specialist agents",
+    "difficulty": "Core concept",
+    "core_idea": "An orchestrator coordinates tasks, context and control flow among specialist components.",
+    "architect_note": "Use multiple agents only when separation of responsibilities or parallelism justifies coordination overhead.",
+    "explanation": "Use multiple agents only when separation of responsibilities or parallelism justifies coordination overhead."
+  },
+  {
+    "id": "C003",
+    "domain": "D1",
+    "title": "Architecture trade-offs",
+    "difficulty": "Core concept",
+    "core_idea": "Architecture selects a design that satisfies requirements under constraints; there is rarely one universally best solution.",
+    "architect_note": "Compare latency, reliability, security, cost, maintainability, scalability and observability.",
+    "explanation": "Compare latency, reliability, security, cost, maintainability, scalability and observability."
+  },
+  {
+    "id": "C004",
+    "domain": "D1",
+    "title": "Human-in-the-loop design",
+    "difficulty": "Core concept",
+    "core_idea": "Human review is useful for high-impact, ambiguous or irreversible decisions.",
+    "architect_note": "Define escalation thresholds, reviewer context, approval actions and audit trails.",
+    "explanation": "Define escalation thresholds, reviewer context, approval actions and audit trails."
+  },
+  {
+    "id": "C005",
+    "domain": "D1",
+    "title": "Reliability and graceful degradation",
+    "difficulty": "Core concept",
+    "core_idea": "Design systems to remain safe and useful when a model, tool, network or dependency fails.",
+    "architect_note": "Use bounded retries, timeouts, fallbacks, idempotency and clear failure states.",
+    "explanation": "Use bounded retries, timeouts, fallbacks, idempotency and clear failure states."
+  },
+  {
+    "id": "C006",
+    "domain": "D2",
+    "title": "System instructions and prompt hierarchy",
+    "difficulty": "Core concept",
+    "core_idea": "System instructions establish role, boundaries and operating rules.",
+    "architect_note": "Prompts are guidance, not a security boundary; enforce permissions and validation in application code.",
+    "explanation": "Prompts are guidance, not a security boundary; enforce permissions and validation in application code."
+  },
+  {
+    "id": "C007",
+    "domain": "D2",
+    "title": "Context engineering",
+    "difficulty": "Core concept",
+    "core_idea": "Context engineering selects, organises and maintains information supplied to a model.",
+    "architect_note": "Prioritise relevant, current, authoritative context; manage token budgets and provenance.",
+    "explanation": "Prioritise relevant, current, authoritative context; manage token budgets and provenance."
+  },
+  {
+    "id": "C008",
+    "domain": "D2",
+    "title": "Prompt chaining",
+    "difficulty": "Core concept",
+    "core_idea": "Prompt chaining decomposes a complex task into sequential model calls.",
+    "architect_note": "Use intermediate schemas and validation; extra calls add latency and possible error propagation.",
+    "explanation": "Use intermediate schemas and validation; extra calls add latency and possible error propagation."
+  },
+  {
+    "id": "C009",
+    "domain": "D2",
+    "title": "Structured output and JSON schemas",
+    "difficulty": "Core concept",
+    "core_idea": "Structured output constrains response format; tool schemas define tool argument structure.",
+    "architect_note": "Validate syntax and semantic correctness at the application boundary.",
+    "explanation": "Validate syntax and semantic correctness at the application boundary."
+  },
+  {
+    "id": "C010",
+    "domain": "D2",
+    "title": "Model selection and effort settings",
+    "difficulty": "Core concept",
+    "core_idea": "Choose model and reasoning effort based on measured performance, latency, cost and reliability.",
+    "architect_note": "Benchmark representative tasks and verify current API configuration before deployment.",
+    "explanation": "Benchmark representative tasks and verify current API configuration before deployment."
+  },
+  {
+    "id": "C011",
+    "domain": "D2",
+    "title": "Prompt injection and untrusted context",
+    "difficulty": "Core concept",
+    "core_idea": "Untrusted input may attempt to redirect model behaviour or misuse tools.",
+    "architect_note": "Use least-privilege tools, server-side authorisation, data separation and confirmation for consequential actions.",
+    "explanation": "Use least-privilege tools, server-side authorisation, data separation and confirmation for consequential actions."
+  },
+  {
+    "id": "C012",
+    "domain": "D3",
+    "title": "Tool use lifecycle",
+    "difficulty": "Core concept",
+    "core_idea": "A tool-enabled assistant selects a tool, provides arguments, receives results and continues.",
+    "architect_note": "Validate arguments, enforce permissions outside the model, set timeouts and log tool calls.",
+    "explanation": "Validate arguments, enforce permissions outside the model, set timeouts and log tool calls."
+  },
+  {
+    "id": "C013",
+    "domain": "D3",
+    "title": "MCP concepts",
+    "difficulty": "Core concept",
+    "core_idea": "MCP standardises how AI applications connect to external tools and context providers.",
+    "architect_note": "Review server trust, authentication, permissions, data exposure and version compatibility.",
+    "explanation": "Review server trust, authentication, permissions, data exposure and version compatibility."
+  },
+  {
+    "id": "C014",
+    "domain": "D3",
+    "title": "API integration and error handling",
+    "difficulty": "Core concept",
+    "core_idea": "Reliable integrations handle authentication, validation, rate limits, timeouts, retries and partial failure.",
+    "architect_note": "Use backoff and idempotency carefully; do not blindly retry non-idempotent actions.",
+    "explanation": "Use backoff and idempotency carefully; do not blindly retry non-idempotent actions."
+  },
+  {
+    "id": "C015",
+    "domain": "D3",
+    "title": "Retrieval-augmented generation",
+    "difficulty": "Core concept",
+    "core_idea": "RAG retrieves external information and supplies it to a model to ground responses.",
+    "architect_note": "Evaluate chunking, metadata, hybrid retrieval, reranking, freshness, citations and access filters.",
+    "explanation": "Evaluate chunking, metadata, hybrid retrieval, reranking, freshness, citations and access filters."
+  },
+  {
+    "id": "C016",
+    "domain": "D4",
+    "title": "Evaluation datasets",
+    "difficulty": "Core concept",
+    "core_idea": "Evaluation datasets contain representative inputs and expected outcomes or grading criteria.",
+    "architect_note": "Maintain common, edge and adversarial cases; version and refresh datasets.",
+    "explanation": "Maintain common, edge and adversarial cases; version and refresh datasets."
+  },
+  {
+    "id": "C017",
+    "domain": "D4",
+    "title": "LLM-as-judge",
+    "difficulty": "Core concept",
+    "core_idea": "An LLM judge scores outputs against a rubric but can show inconsistency and preference bias.",
+    "architect_note": "Calibrate against human labels and audit periodically; judge rationales do not prove correctness.",
+    "explanation": "Calibrate against human labels and audit periodically; judge rationales do not prove correctness."
+  },
+  {
+    "id": "C018",
+    "domain": "D4",
+    "title": "Observability and distributed tracing",
+    "difficulty": "Core concept",
+    "core_idea": "Traces, metrics and logs explain system behaviour across model calls, tools and services.",
+    "architect_note": "Track latency, errors, token usage and tool outcomes while protecting sensitive data.",
+    "explanation": "Track latency, errors, token usage and tool outcomes while protecting sensitive data."
+  },
+  {
+    "id": "C019",
+    "domain": "D4",
+    "title": "Regression testing and release gates",
+    "difficulty": "Core concept",
+    "core_idea": "Regression tests check that changes do not break acceptable behaviour.",
+    "architect_note": "Run representative evaluations after model, prompt, tool, retrieval or code changes.",
+    "explanation": "Run representative evaluations after model, prompt, tool, retrieval or code changes."
+  },
+  {
+    "id": "C020",
+    "domain": "D4",
+    "title": "Optimisation and caching",
+    "difficulty": "Core concept",
+    "core_idea": "Caching can reduce repeated computation when requests or context are reusable.",
+    "architect_note": "Measure hit rates, freshness, invalidation and privacy; savings are workload-dependent.",
+    "explanation": "Measure hit rates, freshness, invalidation and privacy; savings are workload-dependent."
+  },
+  {
+    "id": "C021",
+    "domain": "D5",
+    "title": "Layered safety controls",
+    "difficulty": "Core concept",
+    "core_idea": "Safety is enforced through model instructions, application validation, tool permissions, monitoring and human escalation.",
+    "architect_note": "Assume any one layer can fail; prompts and hooks are not universal security boundaries.",
+    "explanation": "Assume any one layer can fail; prompts and hooks are not universal security boundaries."
+  },
+  {
+    "id": "C022",
+    "domain": "D5",
+    "title": "Data privacy and minimisation",
+    "difficulty": "Core concept",
+    "core_idea": "Collect and expose only data needed for the task.",
+    "architect_note": "Define retention, access control, encryption, redaction and deletion processes.",
+    "explanation": "Define retention, access control, encryption, redaction and deletion processes."
+  },
+  {
+    "id": "C023",
+    "domain": "D5",
+    "title": "Governance and auditability",
+    "difficulty": "Core concept",
+    "core_idea": "Governance establishes accountability, ownership, acceptable use and evidence of controls.",
+    "architect_note": "Maintain inventories, risk assessments, change records, incident procedures and named owners.",
+    "explanation": "Maintain inventories, risk assessments, change records, incident procedures and named owners."
+  },
+  {
+    "id": "C024",
+    "domain": "D5",
+    "title": "Secure tool permissions",
+    "difficulty": "Core concept",
+    "core_idea": "Tools should expose only the minimum actions and data needed.",
+    "architect_note": "Separate read/write permissions, scope credentials and require confirmation for consequential actions.",
+    "explanation": "Separate read/write permissions, scope credentials and require confirmation for consequential actions."
+  },
+  {
+    "id": "C025",
+    "domain": "D6",
+    "title": "Requirements discovery",
+    "difficulty": "Core concept",
+    "core_idea": "Architecture begins by identifying users, tasks, constraints, success measures and risks.",
+    "architect_note": "Convert broad requests into testable functional and non-functional requirements.",
+    "explanation": "Convert broad requests into testable functional and non-functional requirements."
+  },
+  {
+    "id": "C026",
+    "domain": "D6",
+    "title": "Stakeholder communication",
+    "difficulty": "Core concept",
+    "core_idea": "Communicate decisions in terms of outcomes, constraints, trade-offs and evidence.",
+    "architect_note": "Record assumptions, risks, owners and next steps in concise decision records.",
+    "explanation": "Record assumptions, risks, owners and next steps in concise decision records."
+  },
+  {
+    "id": "C027",
+    "domain": "D6",
+    "title": "Lifecycle and change management",
+    "difficulty": "Core concept",
+    "core_idea": "AI systems require ownership across design, testing, deployment, monitoring and retirement.",
+    "architect_note": "Define release ownership, versioning, change approval, rollback and incident response.",
+    "explanation": "Define release ownership, versioning, change approval, rollback and incident response."
+  },
+  {
+    "id": "C028",
+    "domain": "D7",
+    "title": "Developer productivity and reusable patterns",
+    "difficulty": "Core concept",
+    "core_idea": "Reusable templates, typed interfaces and test fixtures reduce repeated effort.",
+    "architect_note": "Keep examples current and review generated code; measure safe delivery, not code volume.",
+    "explanation": "Keep examples current and review generated code; measure safe delivery, not code volume."
+  },
+  {
+    "id": "C029",
+    "domain": "D7",
+    "title": "Hooks and controlled extension points",
+    "difficulty": "Core concept",
+    "core_idea": "Hooks provide defined points to observe or influence application lifecycle events.",
+    "architect_note": "Hooks complement security controls; validate actions in trusted runtime and test bypass paths.",
+    "explanation": "Hooks complement security controls; validate actions in trusted runtime and test bypass paths."
+  }
+]
