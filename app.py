@@ -18,8 +18,10 @@ def conn():
     c.execute("CREATE TABLE IF NOT EXISTS attempts(id INTEGER PRIMARY KEY,item TEXT,response TEXT,reflection TEXT,created TEXT)")
     cols={r[1] for r in c.execute("PRAGMA table_info(attempts)").fetchall()}
     if "cloud_id" not in cols: c.execute("ALTER TABLE attempts ADD COLUMN cloud_id TEXT")
+    if "learner_id" not in cols: c.execute("ALTER TABLE attempts ADD COLUMN learner_id TEXT NOT NULL DEFAULT 'legacy'")
     c.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_attempts_cloud_id ON attempts(cloud_id) WHERE cloud_id IS NOT NULL")
     c.execute("CREATE TABLE IF NOT EXISTS imported(id TEXT PRIMARY KEY,payload TEXT,source TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS audit_events(id TEXT PRIMARY KEY, learner_id TEXT NOT NULL, event_type TEXT NOT NULL, details TEXT, created TEXT NOT NULL)")
     c.commit()
     return c
 
@@ -56,12 +58,34 @@ def render_structured(value):
     else:
         st.markdown(str(value))
 
+def audit_event(event_type, details=None):
+    """Record a learner/admin action locally and in Supabase. Never record passwords."""
+    event_id=str(uuid.uuid4())
+    created=datetime.datetime.now(datetime.timezone.utc).isoformat()
+    details=details or {}
+    c=conn()
+    c.execute("INSERT INTO audit_events(id,learner_id,event_type,details,created) VALUES(?,?,?,?,?)",
+              (event_id,LEARNER_ID,event_type,json.dumps(details,ensure_ascii=False),created))
+    c.commit()
+    if CLOUD_SYNC:
+        try:
+            response=requests.post(
+                f"{SUPABASE_URL}/rest/v1/audit_logs",
+                headers={**cloud_headers(),"Prefer":"return=minimal"},
+                json={"event_id":event_id,"learner_id":LEARNER_ID,"event_type":event_type,
+                      "details":details,"created_at":created},timeout=15)
+            response.raise_for_status()
+        except Exception as exc:
+            st.warning(f"Audit event saved locally but cloud audit sync failed: {exc}")
+
 def save_progress(cid,status,confidence,notes):
+    stored_id=f"{LEARNER_ID}::{cid}"
+    updated=datetime.datetime.now().isoformat(timespec="minutes")
     c=conn(); c.execute("""INSERT INTO progress VALUES(?,?,?,?,?)
     ON CONFLICT(id) DO UPDATE SET status=excluded.status,confidence=excluded.confidence,notes=excluded.notes,updated=excluded.updated""",
-    (cid,status,confidence,notes,datetime.datetime.now().isoformat(timespec="minutes"))); c.commit()
-    cloud_upsert("progress:"+cid,{"id":cid,"status":status,"confidence":confidence,"notes":notes,
-                "updated":datetime.datetime.now().isoformat(timespec="minutes")})
+    (stored_id,status,confidence,notes,updated)); c.commit()
+    cloud_upsert("progress:"+cid,{"id":cid,"status":status,"confidence":confidence,"notes":notes,"updated":updated})
+    audit_event("progress_saved", {"lesson_id":cid,"status":status,"confidence":confidence})
 
 def say(text,key):
     safe=json.dumps(text[:6000],ensure_ascii=False).replace("<","\\u003c").replace(">","\\u003e").replace("&","\\u0026")
@@ -83,11 +107,9 @@ ACADEMY_PASSWORD = secret_value("app", "access_password", "")
 CLOUD_SYNC = bool(SUPABASE_URL and SUPABASE_KEY)
 
 def cloud_headers():
-    return {
-        "apikey": SUPABASE_KEY,
-        "Content-Type": "application/json",
-        "Prefer": "resolution=merge-duplicates,return=minimal"
-    }
+    # Supabase sb_secret_ keys are sent as apikey; do not use them as Bearer JWTs.
+    return {"apikey": SUPABASE_KEY,
+            "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal"}
 
 def cloud_upsert(record_key, payload):
     if not CLOUD_SYNC: return False
@@ -95,7 +117,7 @@ def cloud_upsert(record_key, payload):
         response=requests.post(
             f"{SUPABASE_URL}/rest/v1/academy_records?on_conflict=record_key",
             headers=cloud_headers(),
-            json={"record_key":record_key,"owner_key":"primary","payload":payload,
+            json={"record_key":f"{LEARNER_ID}:{record_key}","owner_key":LEARNER_ID,"payload":payload,
                   "updated_at":datetime.datetime.now(datetime.timezone.utc).isoformat()}
         ,timeout=15)
         response.raise_for_status()
@@ -108,23 +130,24 @@ def sync_cloud_to_local():
     if not CLOUD_SYNC: return
     try:
         response=requests.get(
-            f"{SUPABASE_URL}/rest/v1/academy_records?owner_key=eq.primary&select=record_key,payload",
+            f"{SUPABASE_URL}/rest/v1/academy_records?owner_key=eq.{LEARNER_ID}&select=record_key,payload",
             headers=cloud_headers(),timeout=15)
         response.raise_for_status()
         c=conn()
         for row in response.json():
-            key=row.get("record_key","")
+            key=row.get("record_key","").split(":",1)[-1]
             payload=row.get("payload",{})
             if key.startswith("progress:"):
                 c.execute("""INSERT INTO progress(id,status,confidence,notes,updated) VALUES(?,?,?,?,?)
                     ON CONFLICT(id) DO UPDATE SET status=excluded.status,confidence=excluded.confidence,
                     notes=excluded.notes,updated=excluded.updated""",
-                    (payload.get("id"),payload.get("status","Learning"),int(payload.get("confidence",0)),
+                    (f"{LEARNER_ID}::{payload.get('id')}",payload.get("status","Learning"),int(payload.get("confidence",0)),
                      payload.get("notes",""),payload.get("updated","")))
             elif key.startswith("attempt:"):
-                c.execute("INSERT OR IGNORE INTO attempts(item,response,reflection,created,cloud_id) VALUES(?,?,?,?,?)",
+                cloud_id=f"{LEARNER_ID}:{key}"
+                c.execute("INSERT OR IGNORE INTO attempts(item,response,reflection,created,cloud_id,learner_id) VALUES(?,?,?,?,?,?)",
                     (payload.get("item",""),payload.get("response",""),payload.get("reflection",""),
-                     payload.get("created",""),key))
+                     payload.get("created",""),cloud_id,LEARNER_ID))
             elif key.startswith("import:"):
                 imported_payload=payload.get("payload",{})
                 c.execute("INSERT OR REPLACE INTO imported(id,payload,source) VALUES(?,?,?)",
@@ -133,47 +156,100 @@ def sync_cloud_to_local():
     except Exception as exc:
         st.warning(f"Cloud data could not be loaded. Local content remains available. Details: {exc}")
 
-def require_cloud_password():
+# Five named learner accounts plus an administrator account are configured in Streamlit secrets.
+LEARNERS = secret_value("learners", "accounts", {})
+ADMIN_PASSWORD = secret_value("admin", "password", "")
+
+def authenticate_user():
     if not CLOUD_SYNC:
-        st.sidebar.info("Local-only storage")
-        return True
-    st.sidebar.success("Cloud sync configured")
-    if not ACADEMY_PASSWORD:
-        st.error("Cloud sync is configured but the academy access password is missing. Add [app].access_password to Streamlit secrets.")
+        st.error("Multi-learner mode requires Supabase cloud sync. Configure [supabase] url and service_role_key in Streamlit secrets.")
         return False
-    if st.session_state.get("academy_authenticated"):
+    if st.session_state.get("academy_user"):
         return True
     st.title("🔐 CCAR-P Intelligence Academy")
-    st.write("This private study workspace requires your access password.")
-    entered=st.text_input("Academy access password",type="password")
-    if st.button("Unlock academy",type="primary"):
-        if ACADEMY_PASSWORD and hmac.compare_digest(entered,ACADEMY_PASSWORD):
-            st.session_state["academy_authenticated"]=True
-            st.rerun()
-        else:
-            st.error("Incorrect password.")
-    st.caption("Access is protected by the password configured in your Streamlit secrets.")
+    st.write("Sign in with your assigned learner account. Each learner has a separate progress record.")
+    role=st.radio("Sign in as",["Learner","Administrator"],horizontal=True)
+    if role=="Learner":
+        username=st.selectbox("Learner account",[f"learner{i}" for i in range(1,6)])
+        password=st.text_input("Your personal password",type="password")
+        if st.button("Sign in",type="primary"):
+            expected=str(LEARNERS.get(username, "")) if isinstance(LEARNERS,dict) else ""
+            if expected and hmac.compare_digest(password,expected):
+                st.session_state["academy_user"]=username
+                st.session_state["academy_role"]="learner"
+                st.session_state["audit_login_pending"]=True
+                st.rerun()
+            st.error("Invalid learner account or password. Contact the Academy administrator.")
+    else:
+        password=st.text_input("Administrator password",type="password")
+        if st.button("Administrator sign in",type="primary"):
+            if ADMIN_PASSWORD and hmac.compare_digest(password,str(ADMIN_PASSWORD)):
+                st.session_state["academy_user"]="admin"
+                st.session_state["academy_role"]="admin"
+                st.session_state["audit_login_pending"]=True
+                st.rerun()
+            st.error("Incorrect administrator password.")
+    st.caption("Learner accounts are private. Do not share passwords. The administrator can issue or reset credentials.")
     return False
 
-if not require_cloud_password():
+if not authenticate_user():
     st.stop()
-if CLOUD_SYNC:
+LEARNER_ID=st.session_state["academy_user"]
+IS_ADMIN=st.session_state.get("academy_role")=="admin"
+if st.session_state.pop("audit_login_pending",False): audit_event("sign_in", {"role":st.session_state.get("academy_role")})
+if not IS_ADMIN:
     sync_cloud_to_local()
 
 items=bank()
 st.markdown("""<style>.stApp{background:#171A1D;color:#F4F6F8}[data-testid="stSidebar"]{background:#20262B}div[data-testid="stMetric"]{background:#20262B;padding:12px;border-radius:10px}</style>""",unsafe_allow_html=True)
 st.sidebar.title("🧠 CCAR-P Academy")
-st.sidebar.caption("Full Edition 2.1 · 29 professional lessons · 7 domains")
+st.sidebar.caption("Multi-learner Edition · 29 professional lessons · 7 domains")
+st.sidebar.write(f"Signed in: **{LEARNER_ID}**")
+if st.sidebar.button("Sign out"):
+    audit_event("sign_out", {"role":st.session_state.get("academy_role")})
+    for k in ["academy_user","academy_role"]: st.session_state.pop(k,None)
+    st.rerun()
 st.sidebar.caption("Think like an Architect. Build like an Engineer.")
-page=st.sidebar.radio("Workspace",["Dashboard","Learning Path","Learn by Domain","Assessment Centre","Practice Centre","Guided Tutor","Voice Reader","Question Bank","Progress & Backup","About"])
+workspace=["Administrator Dashboard"] if IS_ADMIN else ["Dashboard","Learning Path","Learn by Domain","Assessment Centre","Practice Centre","Guided Tutor","Voice Reader","Question Bank","Progress & Backup","About"]
+page=st.sidebar.radio("Workspace",workspace)
 st.sidebar.success("Zero paid API keys required")
+
+if page=="Administrator Dashboard":
+    st.title("Academy Administrator Dashboard")
+    st.caption("Five learner accounts · individual progress and assessment records")
+    st.info("Learners cannot view one another's records. This dashboard provides cohort-level monitoring.")
+    summaries=[]
+    for learner in [f"learner{i}" for i in range(1,6)]:
+        try:
+            r=requests.get(f"{SUPABASE_URL}/rest/v1/academy_records?owner_key=eq.{learner}&select=record_key,payload",headers=cloud_headers(),timeout=15)
+            r.raise_for_status(); records=r.json()
+            prog=[x.get("payload",{}) for x in records if str(x.get("record_key","")).endswith(":progress:"+str(x.get("payload",{}).get("id","")))]
+            attempts=[x for x in records if ":attempt:" in str(x.get("record_key", ""))]
+            mastered=sum(x.get("status")=="Mastered" for x in prog)
+            summaries.append({"Learner":learner,"Lessons tracked":len(prog),"Mastered":mastered,"Assessment attempts":len(attempts)})
+        except Exception as exc:
+            st.warning(f"Could not load {learner}: {exc}")
+    if summaries: st.dataframe(summaries,use_container_width=True,hide_index=True)
+    st.markdown("### Account management")
+    st.write("Set or reset learner passwords in Streamlit → Manage app → Settings → Secrets, under the `[learners]` section. Never share the administrator password.")
+    st.code('[learners]\naccounts = { learner1 = "SET_A_UNIQUE_PASSWORD", learner2 = "SET_A_UNIQUE_PASSWORD", learner3 = "SET_A_UNIQUE_PASSWORD", learner4 = "SET_A_UNIQUE_PASSWORD", learner5 = "SET_A_UNIQUE_PASSWORD" }\n\n[admin]\npassword = "SET_A_DIFFERENT_ADMIN_PASSWORD"',language="toml")
+    st.subheader("Recent audit activity")
+    try:
+        audit_response=requests.get(f"{SUPABASE_URL}/rest/v1/audit_logs?select=learner_id,event_type,details,created_at&order=created_at.desc&limit=100",headers=cloud_headers(),timeout=15)
+        audit_response.raise_for_status()
+        audit_rows=audit_response.json()
+        if audit_rows: st.dataframe(audit_rows,use_container_width=True,hide_index=True)
+        else: st.caption("No audit events recorded yet.")
+    except Exception as exc:
+        st.warning(f"Audit log unavailable: {exc}")
+    st.warning("The administrator dashboard reads cohort records and audit events from Supabase. Keep the Supabase secret key private and never put it in GitHub.")
 
 if page=="Dashboard":
     st.title("CCAR-P Intelligence Academy")
     st.write("Your local-first preparation workspace for architecture judgement, Claude systems, integration, evaluation and governance.")
-    c=conn(); mastered=c.execute("SELECT COUNT(*) FROM progress WHERE status='Mastered'").fetchone()[0]
-    tracked=c.execute("SELECT COUNT(*) FROM progress").fetchone()[0]
-    attempts=c.execute("SELECT COUNT(*) FROM attempts").fetchone()[0]
+    c=conn(); mastered=c.execute("SELECT COUNT(*) FROM progress WHERE id LIKE ? AND status='Mastered'",(f"{LEARNER_ID}::%",)).fetchone()[0]
+    tracked=c.execute("SELECT COUNT(*) FROM progress WHERE id LIKE ?",(f"{LEARNER_ID}::%",)).fetchone()[0]
+    attempts=c.execute("SELECT COUNT(*) FROM attempts WHERE learner_id=?",(LEARNER_ID,)).fetchone()[0]
     pro_count=sum(x.get("schema_version")=="2.0" for x in items)
     question_count=sum(len(x.get("knowledge_check",[])) for x in items if x.get("schema_version")=="2.0")
     a,b,d,e,f=st.columns(5); a.metric("Curriculum records",len(items)); b.metric("Professional lessons",pro_count); d.metric("Mastered",mastered); e.metric("Tracked",tracked); f.metric("Assessment attempts",attempts)
@@ -211,22 +287,23 @@ elif page=="Assessment Centre":
             with st.container(border=True):
                 st.markdown(f"**{q.get('id','')} · {q.get('difficulty','')} · {q.get('type','').replace('_',' ').title()}**")
                 st.write(q.get("question",""))
-                response=st.text_area("Your answer / reasoning",key="assess_"+q.get("id",""),height=100)
+                response=st.text_area("Your answer / reasoning",key=LEARNER_ID+"_assess_"+q.get("id",""),height=100)
                 with st.expander("Reveal answer and explanation"):
                     st.markdown("**Expected answer / rubric**")
                     render_structured(q.get("answer",""))
                     st.markdown("**Why this matters**")
                     st.write(q.get("explanation",""))
-                if st.button("Save assessment response",key="save_"+q.get("id","")):
+                if st.button("Save assessment response",key=LEARNER_ID+"_save_"+q.get("id","")):
                     c=conn()
                     reflection=f"Lesson {selected['id']} · {q.get('difficulty','')} · Self-assess against the rubric."
                     created=datetime.datetime.now().isoformat(timespec="minutes")
                     cloud_id=str(uuid.uuid4())
-                    c.execute("INSERT INTO attempts(item,response,reflection,created,cloud_id) VALUES(?,?,?,?,?)",
-                              (q.get("id",""),response,reflection,created,cloud_id))
+                    c.execute("INSERT INTO attempts(item,response,reflection,created,cloud_id,learner_id) VALUES(?,?,?,?,?,?)",
+                              (q.get("id",""),response,reflection,created,f"{LEARNER_ID}:{cloud_id}",LEARNER_ID))
                     c.commit()
                     cloud_upsert("attempt:"+cloud_id,{"item":q.get("id",""),"response":response,
                                   "reflection":reflection,"created":created})
+                    audit_event("assessment_response_saved", {"question_id":q.get("id",""),"lesson_id":selected["id"]})
                     st.success("Response saved to your learning record.")
     else:
         st.info("Professional lessons will appear here when loaded.")
@@ -291,9 +368,9 @@ elif page=="Learn by Domain":
                 read_text=x.get("explanation") or x.get("core_idea","")
             say(read_text,"L"+str(abs(hash(x["id"]))%1000000))
             with st.form("f"+x["id"]):
-                status=st.selectbox("Mastery",["Not started","Learning","Practised","Mastered"],key="s"+x["id"])
-                confidence=st.slider("Confidence",0,5,0,key="c"+x["id"])
-                notes=st.text_area("Notes",key="n"+x["id"])
+                status=st.selectbox("Mastery",["Not started","Learning","Practised","Mastered"],key=LEARNER_ID+"_s"+x["id"])
+                confidence=st.slider("Confidence",0,5,0,key=LEARNER_ID+"_c"+x["id"])
+                notes=st.text_area("Notes",key=LEARNER_ID+"_n"+x["id"])
                 if st.form_submit_button("Save progress"):
                     save_progress(x["id"],status,confidence,notes); st.success("Saved")
 elif page=="Practice Centre":
@@ -308,8 +385,9 @@ elif page=="Practice Centre":
     if st.button("Save attempt"):
         c=conn(); created=datetime.datetime.now().isoformat(timespec="minutes"); cloud_id=str(uuid.uuid4())
         reflection=f"Confidence {confidence}/5"
-        c.execute("INSERT INTO attempts(item,response,reflection,created,cloud_id) VALUES(?,?,?,?,?)",(x["title"],str(answer),reflection,created,cloud_id)); c.commit()
+        c.execute("INSERT INTO attempts(item,response,reflection,created,cloud_id,learner_id) VALUES(?,?,?,?,?,?)",(x["title"],str(answer),reflection,created,f"{LEARNER_ID}:{cloud_id}",LEARNER_ID)); c.commit()
         cloud_upsert("attempt:"+cloud_id,{"item":x["title"],"response":str(answer),"reflection":reflection,"created":created})
+        audit_event("practice_attempt_saved", {"item":x["title"],"confidence":confidence})
         st.success("Attempt saved")
     if x.get("correct_answer"):
         with st.expander("Reveal answer"):
@@ -345,7 +423,11 @@ elif page=="Question Bank":
     st.title("Expandable Question Bank")
     st.write("Import JSON or CSV. Suggested JSON format:")
     st.code('[{"id":"Q001","domain":"D1","title":"Title","question":"Question","options":["A","B","C","D"],"correct_answer":"B","explanation":"Why","difficulty":"Intermediate"}]',language="json")
-    up=st.file_uploader("Upload question bank",type=["json","csv"])
+    if IS_ADMIN:
+        up=st.file_uploader("Upload question bank",type=["json","csv"])
+    else:
+        up=None
+        st.caption("Question-bank imports are managed by the administrator.")
     if up and st.button("Import"):
         try:
             raw=up.getvalue().decode("utf-8-sig")
@@ -366,10 +448,10 @@ elif page=="Question Bank":
 elif page=="Progress & Backup":
     st.title("Progress & Backup")
     c=conn()
-    rows=c.execute("SELECT id,status,confidence,notes,updated FROM progress ORDER BY updated DESC").fetchall()
-    attempts=c.execute("SELECT item,response,reflection,created FROM attempts ORDER BY id DESC").fetchall()
+    rows=c.execute("SELECT id,status,confidence,notes,updated FROM progress WHERE id LIKE ? ORDER BY updated DESC",(f"{LEARNER_ID}::%",)).fetchall()
+    attempts=c.execute("SELECT item,response,reflection,created FROM attempts WHERE learner_id=? ORDER BY id DESC",(LEARNER_ID,)).fetchall()
     a,b,d=st.columns(3); a.metric("Mastered",sum(r[1]=="Mastered" for r in rows)); b.metric("Tracked",len(rows)); d.metric("Attempts",len(attempts))
-    if rows: st.dataframe([{"ID":r[0],"Status":r[1],"Confidence":r[2],"Notes":r[3],"Updated":r[4]} for r in rows],use_container_width=True)
+    if rows: st.dataframe([{"ID":r[0].split("::",1)[-1],"Status":r[1],"Confidence":r[2],"Notes":r[3],"Updated":r[4]} for r in rows],use_container_width=True)
     for item,response,reflection,created in attempts[-30:]:
         with st.expander(f"{item} · {created}"): st.write(response); st.caption(reflection)
     st.markdown("### Restore a previous academy backup")
@@ -381,12 +463,12 @@ elif page=="Progress & Backup":
                 c.execute("""INSERT INTO progress(id,status,confidence,notes,updated) VALUES(?,?,?,?,?)
                     ON CONFLICT(id) DO UPDATE SET status=excluded.status,confidence=excluded.confidence,
                     notes=excluded.notes,updated=excluded.updated""",
-                    (item["id"],item.get("status","Learning"),int(item.get("confidence",0)),item.get("notes",""),item.get("updated","")))
+                    (f"{LEARNER_ID}::{item['id']}",item.get("status","Learning"),int(item.get("confidence",0)),item.get("notes",""),item.get("updated","")))
                 cloud_upsert("progress:"+item["id"],item)
             for item in restored.get("attempts",[]):
                 cloud_id=str(uuid.uuid4())
-                c.execute("INSERT INTO attempts(item,response,reflection,created,cloud_id) VALUES(?,?,?,?,?)",
-                    (item.get("item",""),item.get("response",""),item.get("reflection",""),item.get("created",""),cloud_id))
+                c.execute("INSERT INTO attempts(item,response,reflection,created,cloud_id,learner_id) VALUES(?,?,?,?,?,?)",
+                    (item.get("item",""),item.get("response",""),item.get("reflection",""),item.get("created",""),f"{LEARNER_ID}:{cloud_id}",LEARNER_ID))
                 cloud_upsert("attempt:"+cloud_id,item)
             for item in restored.get("imported",[]):
                 item_id=str(item.get("id") or ("RESTORED-"+str(uuid.uuid4())))
