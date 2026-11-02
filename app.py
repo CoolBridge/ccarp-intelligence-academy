@@ -157,7 +157,29 @@ def sync_cloud_to_local():
         st.warning(f"Cloud data could not be loaded. Local content remains available. Details: {exc}")
 
 # Five named learner accounts plus an administrator account are configured in Streamlit secrets.
-LEARNERS = secret_value("learners", "accounts", {})
+# Accept both TOML layouts:
+#   [learners]
+#   accounts = { learner1 = "...", ... }
+# and
+#   [learners.accounts]
+#   learner1 = "..."
+# Also tolerate the earlier flat [learners] layout.
+def load_learner_accounts():
+    try:
+        section = st.secrets.get("learners", {})
+        if not hasattr(section, "get"):
+            return {}
+        nested = section.get("accounts", None)
+        if hasattr(nested, "get"):
+            return {f"learner{i}": str(nested.get(f"learner{i}", "") or "")
+                    for i in range(1, 6)}
+        # Backward compatibility with flat [learners] learner1=... entries.
+        return {f"learner{i}": str(section.get(f"learner{i}", "") or "")
+                for i in range(1, 6)}
+    except Exception:
+        return {}
+
+LEARNERS = load_learner_accounts()
 ADMIN_PASSWORD = secret_value("admin", "password", "")
 
 def authenticate_user():
@@ -168,6 +190,9 @@ def authenticate_user():
         return True
     st.title("🔐 CCAR-P Intelligence Academy")
     st.write("Sign in with your assigned learner account. Each learner has a separate progress record.")
+    # Safe diagnostic: reports the number of configured accounts, never their passwords.
+    configured_count = sum(bool(LEARNERS.get(f"learner{i}", "")) for i in range(1, 6))
+    st.caption(f"Learner accounts loaded: {configured_count} of 5")
     role=st.radio("Sign in as",["Learner","Administrator"],horizontal=True)
     if role=="Learner":
         username=st.selectbox("Learner account",[f"learner{i}" for i in range(1,6)])
