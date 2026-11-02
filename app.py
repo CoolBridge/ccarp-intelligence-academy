@@ -173,7 +173,13 @@ def authenticate_user():
         username=st.selectbox("Learner account",[f"learner{i}" for i in range(1,6)])
         password=st.text_input("Your personal password",type="password")
         if st.button("Sign in",type="primary"):
-            expected=str(LEARNERS.get(username, "")) if isinstance(LEARNERS,dict) else ""
+            # Streamlit Secrets may expose nested TOML tables as mapping-like
+            # objects rather than plain dict instances. Use the mapping interface.
+            try:
+                expected_value = LEARNERS.get(username, "") if hasattr(LEARNERS, "get") else ""
+            except Exception:
+                expected_value = ""
+            expected = str(expected_value) if expected_value is not None else ""
             if expected and hmac.compare_digest(password,expected):
                 st.session_state["academy_user"]=username
                 st.session_state["academy_role"]="learner"
