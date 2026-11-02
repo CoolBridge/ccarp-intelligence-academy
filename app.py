@@ -83,8 +83,11 @@ ACADEMY_PASSWORD = secret_value("app", "access_password", "")
 CLOUD_SYNC = bool(SUPABASE_URL and SUPABASE_KEY)
 
 def cloud_headers():
-    return {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}",
-            "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal"}
+    return {
+        "apikey": SUPABASE_KEY,
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates,return=minimal"
+    }
 
 def cloud_upsert(record_key, payload):
     if not CLOUD_SYNC: return False
